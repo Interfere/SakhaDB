@@ -7,6 +7,10 @@
 //
 
 #include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 /**
  * This is a magic string that appears at the beginning of every 
@@ -14,6 +18,17 @@
  */
 #ifndef SAKHA_FILE_HEADER /* 123456789 123456 */
 #  define SAKHA_FILE_HEADER "SakhaDB format 1"
+#endif
+
+/**
+ * Define various macros that are missing from some systems
+ */
+#ifndef O_LARGEFILE
+#  define O_LARGEFILE 0
+#endif
+
+#ifndef O_BINARY
+#  define O_BINARY 0
 #endif
 
 /**
@@ -41,6 +56,10 @@ static int posixOpen(
     unixFile* p = (unixFile *)pFile;
     int rc = SAKHADB_OK;            /* Function return code */
     int fd = -1;                    /* File descriptor returned by open() */
+    int internalFlags = 0;          /* Flags for open() */
+    
+    memset(p, 0, sizeof(unixFile));
+    internalFlags |= (O_CREAT | O_BINARY);
     
     return rc;
 }
