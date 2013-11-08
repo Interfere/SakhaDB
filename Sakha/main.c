@@ -12,6 +12,89 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <stdarg.h>
+
+/************************* Logger *****************************/
+
+#define SAKHADB_LOG_BUF_SIZE    64
+
+/**
+ * Log levels
+ */
+#define SAKHADB_LOGLEVEL_NONE   0
+#define SAKHADB_LOGLEVEL_FATAL  1
+#define SAKHADB_LOGLEVEL_ERROR  2
+#define SAKHADB_LOGLEVEL_WARN   3
+#define SAKHADB_LOGLEVEL_INFO   4
+
+/**
+ * Level to str convertion
+ */
+static const char* getLevelStr(int iLevel)
+{
+    const char* pszLevel = 0;   /* String to return */
+    switch(iLevel)
+    {
+        case SAKHADB_LOGLEVEL_FATAL:
+            {
+                static const char* const pszFatal = "FATAL";
+                pszLevel = pszFatal;
+            }
+            break;
+
+        case SAKHADB_LOGLEVEL_ERROR:
+            {
+                static const char* const pszError = "ERROR";
+                pszLevel = pszError;
+            }
+            break;
+
+        case SAKHADB_LOGLEVEL_WARN:
+            {
+                static const char* const pszWarn = "WARN";
+                pszLevel = pszWarn;
+            }
+            break;
+
+        case SAKHADB_LOGLEVEL_INFO:
+            {
+                static const char* const pszInfo = "INFO";
+                pszLevel = pszInfo;
+            }
+            break;
+
+        case SAKHADB_LOGLEVEL_NONE:
+        default:
+            assert(0);
+    };
+
+    return pszLevel;
+}
+
+/**
+ * Helper routine
+ */
+static void logMessage(int iLevel, const char* pszFormat, va_list va)
+{
+    char pszMsg[SAKHADB_LOG_BUF_SIZE*3];
+    int n = vsnprintf(pszMsg, sizeof(pszMsg), pszFormat, va);
+    assert(n < sizeof(pszMsg));
+    fprintf(stderr, "[%s] %s\n", getLevelStr(iLevel), pszMsg);
+}
+
+/**
+ * Routine to log the message
+ */
+void sakhadb_log(int iLevel, const char* pszFormat, ...)
+{
+    va_list va;
+    va_start(va, pszFormat);
+    logMessage(iLevel, pszFormat, va);
+    va_end(va);
+}
+/**************************************************************/
 
 /**
  * This is a magic string that appears at the beginning of every 
@@ -42,6 +125,7 @@
  */
 #define SAKHADB_OK              0 /* Successfull result */
 #define SAKHADB_CANTOPEN        1 /* Unable to open the DB file */
+#define SAKHADB_NOMEM           2 /* A malloc() failed */
 
 /**
  * Flags to open the file
@@ -59,6 +143,7 @@ typedef struct posixFile posixFile;
 struct posixFile
 {
     int fd;                         /* The file descriptor */
+    char pszFilename[1];
 };
 
 /**
@@ -86,11 +171,12 @@ static int robust_open(const char* psz, int f, mode_t m)
 /**
  * close() the file
  */
-static void robust_close(int h)
+static void robust_close(const char* psz, int h)
 {
+    assert(psz);
     if(close(h))
     {
-        // TODO: log the failure
+        sakhadb_log(SAKHADB_LOGLEVEL_WARN, "robust_close: failed to close file [%s]", psz);
     }
 }
 
@@ -99,19 +185,20 @@ static void robust_close(int h)
  */
 static int posixOpen(
     const char* pszPath,            /* Pathname of file to open */
-    void* pFile,                    /* The file descriptor to fill */
-    int flags                       /* Input flags to control the opening */
+    int flags,                      /* Input flags to control the opening */
+    void** pFile                    /* The file descriptor to fill */
 ){
-    posixFile* p = (posixFile *)pFile;
+    assert(pszPath && pFile);       /* Check incoming pointers */
+    posixFile* p = 0;               /* Pointer to internal file structure */
     int rc = SAKHADB_OK;            /* Function return code */
     int fd = -1;                    /* File descriptor returned by open() */
     int internalFlags = 0;          /* Flags for open() */
+    int nPath = strlen(pszPath);
 
     int isReadOnly = (flags & SAKHADB_OPEN_READWRITE == SAKHADB_OPEN_READ);
     int isCreate = (flags & SAKHADB_OPEN_CREATE);
     int isExclusive = (flags & SAKHADB_OPEN_EXCLUSIVE);
     
-    memset(p, 0, sizeof(posixFile));
     if(isReadOnly)
         internalFlags |= O_RDONLY;
     else
@@ -125,12 +212,28 @@ static int posixOpen(
         fd = robust_open(pszPath, internalFlags, 0);
         if(fd < 0)
         {
+            sakhadb_log(SAKHADB_LOGLEVEL_FATAL, "posixOpen: failed to open file [%s]", pszPath);
             rc = SAKHADB_CANTOPEN;
             goto open_finished;
         }
     }
 
+    p = malloc(sizeof(posixFile) + nPath);
+    if(p == 0)
+    {
+        sakhadb_log(SAKHADB_LOGLEVEL_FATAL, "posixOpen: Failed to allocate memory");
+        rc = SAKHADB_NOMEM;
+        goto open_finished;
+    }
+
+    memset(p, 0, sizeof(posixFile));
+
     p->fd = fd;
+    memcpy(p->pszFilename, pszPath, nPath);
+    p->pszFilename[nPath] = '\0';
+
+    posixFile** pp = (posixFile **)pFile;
+    *pp = p;
     
 open_finished:
     return rc;
@@ -146,7 +249,7 @@ static int posixClose(
     posixFile* p = (posixFile *)pFile;
     if(p->fd > 0)
     {
-        robust_close(p->fd);
+        robust_close(p->pszFilename, p->fd);
     }
 
     memset(p, 0, sizeof(posixFile));
@@ -156,9 +259,6 @@ static int posixClose(
 
 int main(int argc, const char * argv[])
 {
-
-    // insert code here...
-    printf("Hello, World!\n");
     return 0;
 }
 
