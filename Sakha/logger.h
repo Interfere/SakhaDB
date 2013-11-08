@@ -18,19 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "sakhadb.h"
-#include "os.h"
+#ifndef _SAKHADB_LOGGER_H_
+#define _SAKHADB_LOGGER_H_
 
-int main(int argc, const char * argv[])
-{
-    sakhadb_file_t fd;
-    int rc = sakhadb_open_file("test.db", SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &fd);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
-    
-    sakhadb_close_file(fd);
-    return 0;
-}
+/**
+ * Log levels
+ */
+#define SAKHADB_LOGLEVEL_NONE   0
+#define SAKHADB_LOGLEVEL_FATAL  1
+#define SAKHADB_LOGLEVEL_ERROR  2
+#define SAKHADB_LOGLEVEL_WARN   3
+#define SAKHADB_LOGLEVEL_INFO   4
 
+/**
+ * Format and write a message to the log if logging is enabled
+ */
+void sakhadb_log(int iLevel, const char* pszFormat, ...);
+
+#endif //_SAKHADB_LOGGER_H_

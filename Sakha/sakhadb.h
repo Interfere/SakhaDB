@@ -18,19 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "sakhadb.h"
-#include "os.h"
+#ifndef _SAKHADB_H_
+#define _SAKHADB_H_
 
-int main(int argc, const char * argv[])
-{
-    sakhadb_file_t fd;
-    int rc = sakhadb_open_file("test.db", SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &fd);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
-    
-    sakhadb_close_file(fd);
-    return 0;
-}
+/**
+ * This is a magic string that appears at the beginning of every
+ * Sakha database in order to identify the file as a real dsatabase.
+ */
+#ifndef SAKHA_FILE_HEADER /* 123456789 123456 */
+#  define SAKHA_FILE_HEADER "SakhaDB format 1"
+#endif
 
+/**
+ * Error codes to return from functions
+ */
+#define SAKHADB_OK              0 /* Successfull result */
+#define SAKHADB_CANTOPEN        1 /* Unable to open the DB file */
+#define SAKHADB_NOMEM           2 /* A malloc() failed */
+
+#endif // _SAKHADB_H_

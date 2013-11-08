@@ -18,19 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "sakhadb.h"
-#include "os.h"
+#ifndef _SAKHADB_OS_H_
+#define _SAKHADB_OS_H_
 
-int main(int argc, const char * argv[])
-{
-    sakhadb_file_t fd;
-    int rc = sakhadb_open_file("test.db", SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &fd);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
-    
-    sakhadb_close_file(fd);
-    return 0;
-}
+/**
+ * File handler
+ */
+typedef struct sakhadb_file* sakhadb_file_t;
 
+/**
+ * Flags to open the file
+ */
+#define SAKHADB_OPEN_READ       0x1
+#define SAKHADB_OPEN_WRITE      0x2
+#define SAKHADB_OPEN_READWRITE  (SAKHADB_OPEN_READ|SAKHADB_OPEN_WRITE)
+#define SAKHADB_OPEN_CREATE     0x4
+#define SAKHADB_OPEN_EXCLUSIVE  0x8
+
+/**
+ * Routines for working with FS
+ */
+int sakhadb_open_file(const char*, int, sakhadb_file_t*);
+int sakhadb_close_file(sakhadb_file_t);
+
+#endif // _SAKHADB_OS_H_

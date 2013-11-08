@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6C3A2C21182D2E280092E169 /* logger.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C20182D2E280092E169 /* logger.c */; };
+		6C3A2C25182D35E70092E169 /* os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C24182D35E70092E169 /* os_posix.c */; };
 		6CF34937182BD10E00887952 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CF34936182BD10E00887952 /* main.c */; };
 		6CF34939182BD10E00887952 /* Sakha.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6CF34938182BD10E00887952 /* Sakha.1 */; };
 /* End PBXBuildFile section */
@@ -25,6 +27,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6C3A2C20182D2E280092E169 /* logger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = logger.c; sourceTree = "<group>"; };
+		6C3A2C22182D2E340092E169 /* logger.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = logger.h; sourceTree = "<group>"; };
+		6C3A2C23182D33FF0092E169 /* os.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = os.h; sourceTree = "<group>"; };
+		6C3A2C24182D35E70092E169 /* os_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os_posix.c; sourceTree = "<group>"; };
+		6C3A2C26182D36730092E169 /* sakhadb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sakhadb.h; sourceTree = "<group>"; };
 		6CF34933182BD10E00887952 /* Sakha */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Sakha; sourceTree = BUILT_PRODUCTS_DIR; };
 		6CF34936182BD10E00887952 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		6CF34938182BD10E00887952 /* Sakha.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Sakha.1; sourceTree = "<group>"; };
@@ -60,8 +67,13 @@
 		6CF34935182BD10E00887952 /* Sakha */ = {
 			isa = PBXGroup;
 			children = (
-				6CF34936182BD10E00887952 /* main.c */,
 				6CF34938182BD10E00887952 /* Sakha.1 */,
+				6C3A2C20182D2E280092E169 /* logger.c */,
+				6C3A2C22182D2E340092E169 /* logger.h */,
+				6CF34936182BD10E00887952 /* main.c */,
+				6C3A2C23182D33FF0092E169 /* os.h */,
+				6C3A2C24182D35E70092E169 /* os_posix.c */,
+				6C3A2C26182D36730092E169 /* sakhadb.h */,
 			);
 			path = Sakha;
 			sourceTree = "<group>";
@@ -118,6 +130,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				6CF34937182BD10E00887952 /* main.c in Sources */,
+				6C3A2C25182D35E70092E169 /* os_posix.c in Sources */,
+				6C3A2C21182D2E280092E169 /* logger.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,6 +239,7 @@
 				6CF3493E182BD10E00887952 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
