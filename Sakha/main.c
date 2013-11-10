@@ -24,13 +24,13 @@
 int main(int argc, const char * argv[])
 {
     sakhadb_file_t fd;
-    int rc = sakhadb_open_file("test.db", SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &fd);
+    int rc = sakhadb_file_open("test.db", SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &fd);
     if(rc != SAKHADB_OK)
     {
         return 1;
     }
     
-    sakhadb_close_file(fd);
+    sakhadb_file_close(fd);
     return 0;
 }
 

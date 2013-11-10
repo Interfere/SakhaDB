@@ -30,10 +30,19 @@
 #endif
 
 /**
- * Error codes to return from functions
+ * Results Codes
+ *
+ * Many SakhaDB functions return an integer result code from the set shown
+ * here in order to indicate success or failure.
  */
-#define SAKHADB_OK              0 /* Successfull result */
-#define SAKHADB_CANTOPEN        1 /* Unable to open the DB file */
-#define SAKHADB_NOMEM           2 /* A malloc() failed */
+#define SAKHADB_OK                  0 /* Successfull result */
+#define SAKHADB_CANTOPEN            1 /* Unable to open the DB file */
+#define SAKHADB_NOMEM               2 /* A malloc() failed */
+#define SAKHADB_IOERR               3 /* Some kind of disk I/O error occured */
+#define SAKHADB_IOERR_READ          4
+#define SAKHADB_IOERR_SHORT_READ    5
+#define SAKHADB_IOERR_WRITE         6
+#define SAKHADB_FULL                7 /* Insertion failed because database is full */
+
 
 #endif // _SAKHADB_H_

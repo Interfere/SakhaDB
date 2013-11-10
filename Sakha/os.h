@@ -21,6 +21,8 @@
 #ifndef _SAKHADB_OS_H_
 #define _SAKHADB_OS_H_
 
+#include <stdint.h>
+
 /**
  * File handler
  */
@@ -38,7 +40,10 @@ typedef struct sakhadb_file* sakhadb_file_t;
 /**
  * Routines for working with FS
  */
-int sakhadb_open_file(const char*, int, sakhadb_file_t*);
-int sakhadb_close_file(sakhadb_file_t);
+int sakhadb_file_open(const char*, int, sakhadb_file_t*);
+int sakhadb_file_close(sakhadb_file_t);
+
+int sakhadb_file_read(sakhadb_file_t fd, void*, int, int64_t);
+int sakhadb_file_write(sakhadb_file_t fd, const void*, int, int64_t);
 
 #endif // _SAKHADB_OS_H_

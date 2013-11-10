@@ -173,13 +173,105 @@ static int posixClose(
     return SAKHADB_OK;
 }
 
-int sakhadb_open_file(const char* pszFilename, int flags, sakhadb_file_t* ppFile)
+static int seekAndRead(
+    posixFile* p,
+    void* pBuf,
+    int amt,
+    int64_t offset
+)
+{
+    int64_t newOffset = lseek(p->fd, offset, SEEK_SET);
+    if(newOffset != offset)
+    {
+        return -1;
+    }
+
+    return read(p->fd, pBuf, amt);
+}
+
+/**
+ * Read data from a file into a buffer. Return SAKHADB_OK if all bytes
+ * were read succesfully and SAKHADB_IOERR if anything went wrong.
+ */
+static int posixRead(
+    posixFile* p,                   /* The file descriptor */
+    void* pBuf,                     /* Buffer receiever */
+    int amt,                        /* Amount of butes to read */
+    int64_t offset
+)
+{
+    int got = seekAndRead(p, pBuf, amt, offset);
+    if(got < 0)
+    {
+        return SAKHADB_IOERR_READ;
+    }
+    else if(got < amt)
+    {
+        return SAKHADB_IOERR_SHORT_READ;
+    }
+
+    return SAKHADB_OK;
+}
+
+static int seekAndWrite(posixFile* p, const void* pBuf, int amt, int64_t offset)
+{
+    // TODO: complete implementation
+    return -1;
+}
+
+/**
+ * Writes data from a buffer into a file. Returns SAKHADB_OK 
+ * on success or some other error code on failure
+ */
+static int posixWrite(
+    posixFile* p,                   /* The file descriptor */
+    const void* pBuf,               /* Data buffer */
+    int amt,                        /* Length of data */
+    int64_t offset
+)
+{
+    int written = 0;
+    while(amt > 0 && (written = seekAndWrite(p, pBuf, amt, offset)) > 0)
+    {
+        amt -= written;
+        offset += written;
+        pBuf = written + (char*)pBuf;
+    }
+
+    if(amt >0)
+    {
+        if(written < 0)
+        {
+            return SAKHADB_IOERR_WRITE;
+        }
+        return SAKHADB_FULL;
+    }
+
+
+    return SAKHADB_OK;
+}
+
+
+/******************* Public API routines  ********************/
+
+int sakhadb_file_open(const char* pszFilename, int flags, sakhadb_file_t* ppFile)
 {
     // TODO: fix calculating absolute path
     return posixOpen(pszFilename, flags, (posixFile**)ppFile);
 }
 
-int sakhadb_close_file(sakhadb_file_t pFile)
+int sakhadb_file_close(sakhadb_file_t fd)
 {
-    return posixClose((posixFile*)pFile);
+    return posixClose((posixFile*)fd);
 }
+
+int sakhadb_file_read(sakhadb_file_t fd, void* pBuf, int amt, int64_t offset)
+{
+    return posixRead((posixFile*)fd, pBuf, amt, offset);
+}
+
+int sakhadb_file_write(sakhadb_file_t fd, const void* pBuf, int amt, int64_t offset)
+{
+    return posixWrite((posixFile*)fd, pBuf, amt, offset);
+}
+
