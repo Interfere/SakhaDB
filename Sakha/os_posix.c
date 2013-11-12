@@ -60,7 +60,7 @@ typedef struct posixFile posixFile;
 struct posixFile
 {
     int fd;                         /* The file descriptor */
-    char pszFilename[1];
+    char pszFilename[1];            /* The file name */
 };
 
 /**
@@ -173,12 +173,11 @@ static int posixClose(
     return SAKHADB_OK;
 }
 
-static int seekAndRead(
-    posixFile* p,
-    void* pBuf,
-    int amt,
-    int64_t offset
-)
+/**
+ * Seek to the offset in p then read amt bytes from p into pBuf.
+ * Return the number of bytes actually read. Updates the offset.
+ */
+static long seekAndRead(posixFile* p, void* pBuf, int amt, int64_t offset)
 {
     int64_t newOffset = lseek(p->fd, offset, SEEK_SET);
     if(newOffset != offset)
@@ -186,7 +185,29 @@ static int seekAndRead(
         return -1;
     }
 
-    return read(p->fd, pBuf, amt);
+    long got = read(p->fd, pBuf, amt);
+    
+    SLOG_INFO("READ    %-3d %5ld %7lld", p->fd, got, offset);
+    
+    return got;
+}
+
+/**
+ * Seek to the offset in p then write buffer starting at pBuf and amt bytes length.
+ * Return the number of bytes actually written. Updates the offset.
+ */
+static long seekAndWrite(posixFile* p, const void* pBuf, int amt, int64_t offset)
+{
+    int64_t newOffset = lseek(p->fd, offset, SEEK_SET);
+    if(newOffset != offset)
+    {
+        return -1;
+    }
+    
+    long written = write(p->fd, pBuf, amt);
+    
+    SLOG_INFO("WRITE   %-3d %5ld %7lld", p->fd, written, offset);
+    return written;
 }
 
 /**
@@ -200,23 +221,20 @@ static int posixRead(
     int64_t offset
 )
 {
-    int got = seekAndRead(p, pBuf, amt, offset);
-    if(got < 0)
+    long got = seekAndRead(p, pBuf, amt, offset);
+    if(got == amt)
+    {
+        return SAKHADB_OK;
+    }
+    else if(got < 0)
     {
         return SAKHADB_IOERR_READ;
     }
-    else if(got < amt)
+    else
     {
+        memset(got + (char *)pBuf, 0, amt-got);
         return SAKHADB_IOERR_SHORT_READ;
     }
-
-    return SAKHADB_OK;
-}
-
-static int seekAndWrite(posixFile* p, const void* pBuf, int amt, int64_t offset)
-{
-    // TODO: complete implementation
-    return -1;
 }
 
 /**
@@ -230,7 +248,7 @@ static int posixWrite(
     int64_t offset
 )
 {
-    int written = 0;
+    long written = 0;
     while(amt > 0 && (written = seekAndWrite(p, pBuf, amt, offset)) > 0)
     {
         amt -= written;
@@ -238,7 +256,7 @@ static int posixWrite(
         pBuf = written + (char*)pBuf;
     }
 
-    if(amt >0)
+    if(amt > 0)
     {
         if(written < 0)
         {
@@ -256,7 +274,6 @@ static int posixWrite(
 
 int sakhadb_file_open(const char* pszFilename, int flags, sakhadb_file_t* ppFile)
 {
-    // TODO: fix calculating absolute path
     return posixOpen(pszFilename, flags, (posixFile**)ppFile);
 }
 

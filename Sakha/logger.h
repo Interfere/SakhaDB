@@ -31,6 +31,21 @@
 #define SAKHADB_LOGLEVEL_INFO   4
 
 /**
+ * Some useful macroses for different logging levels
+ */
+#ifdef DEBUG
+#   define SLOG_FATAL(pszFormat, ...) sakhadb_log(SAKHADB_LOGLEVEL_FATAL, pszFormat, ##__VA_ARGS__)
+#   define SLOG_ERROR(pszFormat, ...) sakhadb_log(SAKHADB_LOGLEVEL_ERROR, pszFormat, ##__VA_ARGS__)
+#   define SLOG_WARN(pszFormat, ...) sakhadb_log(SAKHADB_LOGLEVEL_WARN, pszFormat, ##__VA_ARGS__)
+#   define SLOG_INFO(pszFormat, ...) sakhadb_log(SAKHADB_LOGLEVEL_INFO, pszFormat, ##__VA_ARGS__)
+#else
+#   define SLOG_FATAL(pszFormat, ...)
+#   define SLOG_ERROR(pszFormat, ...)
+#   define SLOG_WARN(pszFormat, ...)
+#   define SLOG_INFO(pszFormat, ...)
+#endif
+
+/**
  * Format and write a message to the log if logging is enabled
  */
 void sakhadb_log(int iLevel, const char* pszFormat, ...);

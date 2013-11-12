@@ -25,8 +25,8 @@
  * This is a magic string that appears at the beginning of every
  * Sakha database in order to identify the file as a real dsatabase.
  */
-#ifndef SAKHA_FILE_HEADER /* 123456789 123456 */
-#  define SAKHA_FILE_HEADER "SakhaDB format 1"
+#ifndef SAKHADB_FILE_HEADER /* 123456789 123456 */
+#  define SAKHADB_FILE_HEADER "SakhaDB format 1"
 #endif
 
 /**
