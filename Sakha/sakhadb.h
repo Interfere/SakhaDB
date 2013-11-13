@@ -30,6 +30,25 @@
 #endif
 
 /**
+ * Database connection handle.
+ *
+ * Each open Sakha database is represented by a pointer to an instance of the opaque
+ * structure named "sakhadb". It is useful to think of an sakhadb pointer as an object.
+ * The sakhadb_open() interfaces is its constructor, and sakhadb_close() is its destructor.
+ */
+typedef struct sakhadb sakhadb;
+
+/**
+ * Opening a new database connection.
+ */
+int sakhadb_open(const char *filename, int flags, sakhadb **ppDb);
+
+/**
+ * Closing a database connection.
+ */
+int sakhadb_close(sakhadb* db);
+
+/**
  * Results Codes
  *
  * Many SakhaDB functions return an integer result code from the set shown

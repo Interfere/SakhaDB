@@ -20,21 +20,47 @@
 
 #include "sakhadb.h"
 
-int main(int argc, const char * argv[])
+#include <stdlib.h>
+#include <string.h>
+#include "os.h"
+
+struct sakhadb
 {
-    sakhadb* db;
-    int rc = sakhadb_open("test.db", 0, &db);
+    sakhadb_file_t  h; /* The file handle */
+};
+
+int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
+{
+    int rc = SAKHADB_OK;
+    sakhadb *db = (sakhadb*)malloc(sizeof(sakhadb));
+    if(!db)
+    {
+        return SAKHADB_NOMEM;
+    }
+    memset(db, 0, sizeof(sakhadb));
+    
+    rc = sakhadb_file_open(filename, SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &db->h);
     if(rc != SAKHADB_OK)
     {
-        return 1;
+        goto cleanup;
     }
     
-    rc = sakhadb_close(db);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
+    *ppDb = db;
+    return rc;
     
-    return 0;
+cleanup:
+    free(db);
+    return rc;
 }
 
+int sakhadb_close(sakhadb* db)
+{
+    int rc = sakhadb_file_close(db->h);
+    if(rc != SAKHADB_OK)
+    {
+        return rc;
+    }
+    
+    free(db);
+    return SAKHADB_OK;
+}

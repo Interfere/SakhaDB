@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6C2CACA818338E6F007ACC65 /* sakhadb.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C2CACA718338E6F007ACC65 /* sakhadb.c */; };
 		6C3A2C21182D2E280092E169 /* logger.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C20182D2E280092E169 /* logger.c */; };
 		6C3A2C25182D35E70092E169 /* os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C24182D35E70092E169 /* os_posix.c */; };
 		6CF34937182BD10E00887952 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CF34936182BD10E00887952 /* main.c */; };
@@ -27,6 +28,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6C2CACA718338E6F007ACC65 /* sakhadb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sakhadb.c; sourceTree = "<group>"; };
 		6C3A2C20182D2E280092E169 /* logger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = logger.c; sourceTree = "<group>"; };
 		6C3A2C22182D2E340092E169 /* logger.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = logger.h; sourceTree = "<group>"; };
 		6C3A2C23182D33FF0092E169 /* os.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = os.h; sourceTree = "<group>"; };
@@ -74,6 +76,7 @@
 				6C3A2C23182D33FF0092E169 /* os.h */,
 				6C3A2C24182D35E70092E169 /* os_posix.c */,
 				6C3A2C26182D36730092E169 /* sakhadb.h */,
+				6C2CACA718338E6F007ACC65 /* sakhadb.c */,
 			);
 			path = Sakha;
 			sourceTree = "<group>";
@@ -129,6 +132,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C2CACA818338E6F007ACC65 /* sakhadb.c in Sources */,
 				6CF34937182BD10E00887952 /* main.c in Sources */,
 				6C3A2C25182D35E70092E169 /* os_posix.c in Sources */,
 				6C3A2C21182D2E280092E169 /* logger.c in Sources */,
