@@ -43,7 +43,10 @@ typedef struct sakhadb_file* sakhadb_file_t;
 int sakhadb_file_open(const char*, int, sakhadb_file_t*);
 int sakhadb_file_close(sakhadb_file_t);
 
-int sakhadb_file_read(sakhadb_file_t fd, void*, int, int64_t);
-int sakhadb_file_write(sakhadb_file_t fd, const void*, int, int64_t);
+int sakhadb_file_read(sakhadb_file_t, void*, int, int64_t);
+int sakhadb_file_write(sakhadb_file_t, const void*, int, int64_t);
+
+int sakhadb_file_size(sakhadb_file_t, int64_t*);
+const char* sakhadb_file_filename(sakhadb_file_t);
 
 #endif // _SAKHADB_OS_H_

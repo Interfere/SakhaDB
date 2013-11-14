@@ -269,6 +269,29 @@ static int posixWrite(
     return SAKHADB_OK;
 }
 
+/**
+ * Determine the current size of a file in bytes.
+ */
+static int posixFileSize(
+    posixFile* p,                   /* The file descriptor */
+    int64_t* pSize
+)
+{
+    assert(p);
+    assert(pSize);
+    
+    struct stat buf;
+    int rc = fstat(p->fd, &buf);
+    if(rc)
+    {
+        SLOG_ERROR("posixFileSize: 'fstat' failed [code: %d][%s]", errno, strerror(errno));
+        return SAKHADB_IOERR_FSTAT;
+    }
+    *pSize = buf.st_size;
+    
+    return SAKHADB_OK;
+}
+
 
 /******************* Public API routines  ********************/
 
@@ -290,5 +313,15 @@ int sakhadb_file_read(sakhadb_file_t fd, void* pBuf, int amt, int64_t offset)
 int sakhadb_file_write(sakhadb_file_t fd, const void* pBuf, int amt, int64_t offset)
 {
     return posixWrite((posixFile*)fd, pBuf, amt, offset);
+}
+
+int sakhadb_file_size(sakhadb_file_t fd, int64_t* pSize)
+{
+    return posixFileSize((posixFile *)fd, pSize);
+}
+
+const char* sakhadb_file_filename(sakhadb_file_t fd)
+{
+    return ((posixFile *)fd)->pszFilename;
 }
 

@@ -20,20 +20,76 @@
 
 #include "paging.h"
 
+#include <assert.h>
 #include <stdlib.h>
 
 #include "sakhadb.h"
 #include "logger.h"
+
+struct Page
+{
+    struct Pager* pPager;           /* Pager, which this page belongs to */
+    Pgno        pageNumber;         /* Page's number */
+    int         isNew;              /* Indicates whether the page persists in DB file */
+    char        pData[1];           /* Data buffer */
+};
 
 struct Pager
 {
     sakhadb_file_t  fd;             /* File handle */
     Pgno            dbSize;         /* Number of pages in database */
     Pgno            fileSize;       /* Size of the file in pages */
-    sakhadb_page_t* page1;          /* Pointer to the first page in file. */
-    
-    int32_t         pageSize;       /* Page size for current database */
+    struct Page     *page1;         /* Pointer to the first page in file. */
+    uint16_t        pageSize;       /* Page size for current database */
 };
+
+/**
+ * The Page object contructor.
+ */
+static int createPage(
+    struct Pager *pPager,           /* Pager object, that owns the page */
+    Pgno pageNumber,                /* Number of the page */
+    int isNew,                      /* Is the page would be new */
+    struct Page **ppPage
+)
+{
+    struct Page *pPage = (struct Page *)malloc(sizeof(struct Page) + pPager->pageSize);
+    if(!pPage)
+    {
+        SLOG_FATAL("createPage: failed to allocate memory for Page object.");
+        return SAKHADB_NOMEM;
+    }
+    
+    pPage->pPager = pPager;
+    pPage->pageNumber = pageNumber;
+    pPage->isNew = isNew;
+    
+    *ppPage = pPage;
+    return SAKHADB_OK;
+}
+
+/**
+ * The Page object destructor.
+ */
+static void destroyPage(struct Page *pPage)
+{
+    free(pPage);
+}
+
+/**
+ * Read data from file
+ */
+static int fetchPageContent(struct Page *pPage)
+{
+    Pgno pageNumber = pPage->pageNumber;
+    int32_t pageSize = pPage->pPager->pageSize;
+    int64_t offset = (int64_t)pageNumber * pageSize;
+    
+    assert(pageNumber);
+    assert(pageSize > 512);
+    
+    return sakhadb_file_read(pPage->pPager->fd, pPage->pData, pageSize, offset);
+}
 
 int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager)
 {
@@ -45,21 +101,50 @@ int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager)
     }
     
     pager->fd = fd;
-    
-    // TODO: calculate size of file
-    // TODO: calculate size of database
     pager->pageSize = SAKHADB_DEFAULT_PAGE_SIZE;
     
-    // TODO: fetch first page from database
-    pager->page1 = 0;
+    int64_t fileSize = 0;
+    int rc = sakhadb_file_size(fd, &fileSize);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_FATAL("sakhadb_pager_create: failed to get file size. [%s]", sakhadb_file_filename(fd));
+        goto cleanup;
+    }
+    
+    pager->fileSize = (Pgno)(fileSize/pager->pageSize);
+    pager->dbSize = pager->fileSize?pager->fileSize:1;
+    
+    rc = createPage(pager, 1, pager->fileSize == 0, &pager->page1);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_FATAL("sakhadb_pager_create: failed to create page 1. [%s]");
+        goto cleanup;
+    }
+    
+    if(pager->fileSize > 0)
+    {
+        rc = fetchPageContent(pager->page1);
+        if(rc != SAKHADB_OK)
+        {
+            SLOG_FATAL("sakhadb_pager_create: failed to fetch data for page 1.");
+            goto fetch_failed;
+        }
+    }
     
     *pPager = pager;
     return SAKHADB_OK;
+    
+fetch_failed:
+    destroyPage(pager->page1);
+    
+cleanup:
+    free(pager);
+    return rc;
 }
 
 int sakhadb_pager_destroy(sakhadb_pager_t pager)
 {
-    // TODO: release page1
+    destroyPage(pager->page1);
     free(pager);
     return SAKHADB_OK;
 }

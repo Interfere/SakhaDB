@@ -40,13 +40,7 @@ typedef uint32_t Pgno;
 /**
  * An object that represents one page.
  */
-typedef struct Page sakhadb_page_t;
-struct Page
-{
-    Pgno        pageNumber;
-    char*       pData;
-    uint32_t    nData;
-};
+typedef struct Page* sakhadb_page_t;
 
 /**
  * Each open file is managed by an instance of the "sakhadb_pager_t" object.

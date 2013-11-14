@@ -73,8 +73,8 @@
 			isa = PBXGroup;
 			children = (
 				6CF34938182BD10E00887952 /* Sakha.1 */,
-				6C3A2C20182D2E280092E169 /* logger.c */,
 				6C3A2C22182D2E340092E169 /* logger.h */,
+				6C3A2C20182D2E280092E169 /* logger.c */,
 				6CF34936182BD10E00887952 /* main.c */,
 				6C3A2C23182D33FF0092E169 /* os.h */,
 				6C3A2C24182D35E70092E169 /* os_posix.c */,
