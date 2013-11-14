@@ -22,16 +22,35 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 
 #include "sakhadb.h"
 #include "logger.h"
+
+#ifdef __GNUC__
+#define container_of(ptr, type, member) ({ \
+                    const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+                    (type *)( (char *)__mptr - offsetof(type, member) ); })
+#else
+#define container_of(ptr, type, member) ( (type *)((char *)(ptr) - offsetof(type, member)) )
+#endif
+
+#define PTR_TO_PAGE(ptr)            container_of(ptr, struct Page, pData)
 
 struct Page
 {
     struct Pager* pPager;           /* Pager, which this page belongs to */
     Pgno        pageNumber;         /* Page's number */
-    int         isNew;              /* Indicates whether the page persists in DB file */
+    int         nRef;               /* No of references to the current page */
     char        pData[1];           /* Data buffer */
+    
+    struct Page *next;              /* Linked list of pages */
+};
+
+struct PagesHashTable
+{
+    struct Page* _ht[255];
 };
 
 struct Pager
@@ -41,7 +60,51 @@ struct Pager
     Pgno            fileSize;       /* Size of the file in pages */
     struct Page     *page1;         /* Pointer to the first page in file. */
     uint16_t        pageSize;       /* Page size for current database */
+    
+    struct PagesHashTable table;    /* Hash table to store pages */
 };
+
+/**
+ * Add a page into hash table. No-op if page exists.
+ */
+static void addPageToTable(struct Pager* pager, struct Page* page)
+{
+    assert(page);
+    int hash = page->pageNumber % sizeof(pager->table._ht);
+    page->next = pager->table._ht[hash];
+    pager->table._ht[hash] = page;
+}
+
+static void removePageFromTable(struct Pager* pager, struct Page* page)
+{
+    assert(page);
+    int hash = page->pageNumber % sizeof(pager->table._ht);
+    struct Page* pPage = pager->table._ht[hash];
+    if(pPage == page)
+    {
+        pager->table._ht[hash] = pPage->next;
+    }
+    else
+    {
+        while ((page != pPage->next) && (pPage = pPage->next));
+        if(pPage)
+        {
+            pPage->next = page->next;
+        }
+    }
+}
+
+/**
+ * Lookup page into hash table. Returns 0 if page is not present.
+ */
+static struct Page* lookupPageInTable(struct Pager* pager, Pgno no)
+{
+    assert(no > 0);
+    int hash = no % sizeof(pager->table._ht);
+    struct Page* pPage = pager->table._ht[hash];
+    while (pPage && pPage->pageNumber != no) pPage = pPage->next;
+    return pPage;
+}
 
 /**
  * The Page object contructor.
@@ -49,7 +112,6 @@ struct Pager
 static int createPage(
     struct Pager *pPager,           /* Pager object, that owns the page */
     Pgno pageNumber,                /* Number of the page */
-    int isNew,                      /* Is the page would be new */
     struct Page **ppPage
 )
 {
@@ -62,7 +124,9 @@ static int createPage(
     
     pPage->pPager = pPager;
     pPage->pageNumber = pageNumber;
-    pPage->isNew = isNew;
+    pPage->nRef = 1;
+    
+    addPageToTable(pPager, pPage);
     
     *ppPage = pPage;
     return SAKHADB_OK;
@@ -73,7 +137,21 @@ static int createPage(
  */
 static void destroyPage(struct Page *pPage)
 {
+    removePageFromTable(pPage->pPager, pPage);
     free(pPage);
+}
+
+static void retainPage(struct Page *pPage)
+{
+    ++pPage->nRef;
+}
+
+static void releasePage(struct Page *pPage)
+{
+    if(--pPage->nRef == 0)
+    {
+        destroyPage(pPage);
+    }
 }
 
 /**
@@ -90,6 +168,8 @@ static int fetchPageContent(struct Page *pPage)
     
     return sakhadb_file_read(pPage->pPager->fd, pPage->pData, pageSize, offset);
 }
+
+/******************* Public API routines  ********************/
 
 int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager)
 {
@@ -113,8 +193,9 @@ int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager)
     
     pager->fileSize = (Pgno)(fileSize/pager->pageSize);
     pager->dbSize = pager->fileSize?pager->fileSize:1;
+    memset(pager->table._ht, 0, sizeof(pager->table._ht));
     
-    rc = createPage(pager, 1, pager->fileSize == 0, &pager->page1);
+    rc = createPage(pager, 1, &pager->page1);
     if(rc != SAKHADB_OK)
     {
         SLOG_FATAL("sakhadb_pager_create: failed to create page 1. [%s]");
@@ -147,4 +228,52 @@ int sakhadb_pager_destroy(sakhadb_pager_t pager)
     destroyPage(pager->page1);
     free(pager);
     return SAKHADB_OK;
+}
+
+int sakhadb_pager_get_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData)
+{
+    if(no == 1)
+    {
+        *ppData = pager->page1->pData;
+        return SAKHADB_OK;
+    }
+    
+    int isNew = no > pager->dbSize;
+    if(readonly && isNew)
+    {
+        return SAKHADB_NOTAVAIL;
+    }
+    
+    int rc = SAKHADB_OK;
+    struct Page* pPage = lookupPageInTable(pager, no);
+    if(!pPage)
+    {
+        rc = createPage(pager, no, &pPage);
+        if(rc != SAKHADB_OK)
+        {
+            SLOG_ERROR("sakhadb_pager_get_page: failed to create page [%d]", no);
+            return rc;
+        }
+        if(!isNew)
+        {
+            rc = fetchPageContent(pPage);
+            if(rc != SAKHADB_OK)
+            {
+                SLOG_ERROR("sakhadb_pager_get_page: failed to fetch page content. [%d]", no);
+                goto cleanup;
+            }
+        }
+    }
+    else
+    {
+        retainPage(pPage);
+    }
+    
+    
+    *ppData = pPage->pData;
+    return SAKHADB_OK;
+    
+cleanup:
+    releasePage(pPage);
+    return rc;
 }

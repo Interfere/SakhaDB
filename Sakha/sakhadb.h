@@ -63,6 +63,7 @@ int sakhadb_close(sakhadb* db);
 #define SAKHADB_IOERR_WRITE         6
 #define SAKHADB_IOERR_FSTAT         7
 #define SAKHADB_FULL                8 /* Insertion failed because database is full */
+#define SAKHADB_NOTAVAIL            9 /* Requesting page is not available */
 
 
 #endif // _SAKHADB_H_

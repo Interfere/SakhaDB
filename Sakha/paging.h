@@ -38,11 +38,6 @@
 typedef uint32_t Pgno;
 
 /**
- * An object that represents one page.
- */
-typedef struct Page* sakhadb_page_t;
-
-/**
  * Each open file is managed by an instance of the "sakhadb_pager_t" object.
  */
 typedef struct Pager* sakhadb_pager_t;
@@ -56,5 +51,18 @@ int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager);
  * Destroy pager. Consider this method as destructor.
  */
 int sakhadb_pager_destroy(sakhadb_pager_t pager);
+
+/**
+ * Creates page and reads content from file if available.
+ *
+ * You can request readonly page by specifying corresponding flag.
+ * If 'readonly' flag had been set and page did not present in DB file
+ * then routine would return SAKHADB_NOTAVAIL. 
+ *
+ * If 'readonly' flag had been unset and page did not present in DB file
+ * then routine would create new page with ready-to-use content.
+ */
+int sakhadb_pager_get_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData);
+
 
 #endif // _SAKHADB_PAGING_H_
