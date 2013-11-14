@@ -18,23 +18,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "sakhadb.h"
+#ifndef _SAKHADB_PAGING_H_
+#define _SAKHADB_PAGING_H_
 
-int main(int argc, const char * argv[])
+#include <stdint.h>
+#include "os.h"
+
+/**
+ * The default size of a database page.
+ */
+#ifndef SAKHADB_DEFAULT_PAGE_SIZE
+#  define SAKHADB_DEFAULT_PAGE_SIZE 1024
+#endif
+
+/**
+ * The type used to represent the page number. The first page in a file 
+ * is called page 1. 0 is used to represent "not a page".
+ */
+typedef uint32_t Pgno;
+
+/**
+ * An object that represents one page.
+ */
+typedef struct Page sakhadb_page_t;
+struct Page
 {
-    sakhadb* db = 0;
-    int rc = sakhadb_open("test.db", 0, &db);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
-    
-    rc = sakhadb_close(db);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
-    
-    return 0;
-}
+    Pgno        pageNumber;
+    char*       pData;
+    uint32_t    nData;
+};
 
+/**
+ * Each open file is managed by an instance of the "sakhadb_pager_t" object.
+ */
+typedef struct Pager* sakhadb_pager_t;
+
+/**
+ * Creates pager. Consider this method as constructor.
+ */
+int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager);
+
+/**
+ * Destroy pager. Consider this method as destructor.
+ */
+int sakhadb_pager_destroy(sakhadb_pager_t pager);
+
+#endif // _SAKHADB_PAGING_H_

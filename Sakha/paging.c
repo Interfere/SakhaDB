@@ -18,23 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "sakhadb.h"
+#include "paging.h"
 
-int main(int argc, const char * argv[])
+#include <stdlib.h>
+
+#include "sakhadb.h"
+#include "logger.h"
+
+struct Pager
 {
-    sakhadb* db = 0;
-    int rc = sakhadb_open("test.db", 0, &db);
-    if(rc != SAKHADB_OK)
+    sakhadb_file_t  fd;             /* File handle */
+    Pgno            dbSize;         /* Number of pages in database */
+    Pgno            fileSize;       /* Size of the file in pages */
+    sakhadb_page_t* page1;          /* Pointer to the first page in file. */
+    
+    int32_t         pageSize;       /* Page size for current database */
+};
+
+int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager)
+{
+    struct Pager* pager = (struct Pager*)malloc(sizeof(struct Pager));
+    if(!pager)
     {
-        return 1;
+        SLOG_FATAL("sakhadb_pager_create: failed to allocate memory for pager");
+        return SAKHADB_NOMEM;
     }
     
-    rc = sakhadb_close(db);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
+    pager->fd = fd;
     
-    return 0;
+    // TODO: calculate size of file
+    // TODO: calculate size of database
+    pager->pageSize = SAKHADB_DEFAULT_PAGE_SIZE;
+    
+    // TODO: fetch first page from database
+    pager->page1 = 0;
+    
+    *pPager = pager;
+    return SAKHADB_OK;
 }
 
+int sakhadb_pager_destroy(sakhadb_pager_t pager)
+{
+    // TODO: release page1
+    free(pager);
+    return SAKHADB_OK;
+}

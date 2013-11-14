@@ -22,11 +22,15 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "logger.h"
 #include "os.h"
+#include "paging.h"
 
 struct sakhadb
 {
-    sakhadb_file_t  h; /* The file handle */
+    sakhadb_file_t  h;      /* The file handle */
+    sakhadb_pager_t pager;  /* The pager */
 };
 
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
@@ -35,6 +39,7 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
     sakhadb *db = (sakhadb*)malloc(sizeof(sakhadb));
     if(!db)
     {
+        SLOG_FATAL("sakhadb_open: failed to allocate memory for struct sakhadb");
         return SAKHADB_NOMEM;
     }
     memset(db, 0, sizeof(sakhadb));
@@ -42,25 +47,42 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
     rc = sakhadb_file_open(filename, SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &db->h);
     if(rc != SAKHADB_OK)
     {
-        goto cleanup;
+        SLOG_FATAL("sakhadb_open: failed to open file [code:%d][%s][flags:%d]", rc, filename, flags);
+        goto file_open_failed;
+    }
+    
+    rc = sakhadb_pager_create(db->h, &db->pager);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_FATAL("sakhadb_open: failed to create pager [code:%d]", rc);
+        goto create_pager_failed;
     }
     
     *ppDb = db;
     return rc;
     
-cleanup:
+create_pager_failed:
+    sakhadb_file_close(db->h);
+    
+file_open_failed:
     free(db);
     return rc;
 }
 
 int sakhadb_close(sakhadb* db)
 {
-    int rc = sakhadb_file_close(db->h);
+    int rc = sakhadb_pager_destroy(db->pager);
     if(rc != SAKHADB_OK)
     {
-        return rc;
+        SLOG_WARN("sakhadb_close: failed to destroy pager [%d]", rc);
+    }
+    
+    rc = sakhadb_file_close(db->h);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_WARN("sakhadb_close: failed to close file [%d]", rc);
     }
     
     free(db);
-    return SAKHADB_OK;
+    return rc;
 }
