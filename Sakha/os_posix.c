@@ -59,6 +59,7 @@
 typedef struct posixFile posixFile;
 struct posixFile
 {
+    sakhadb_allocator_t allocator;  /* Allocator to use */
     int fd;                         /* The file descriptor */
     char pszFilename[1];            /* The file name */
 };
@@ -101,6 +102,7 @@ static void robust_close(const char* psz, int h)
  * Opens file POSIX-style
  */
 static int posixOpen(
+    sakhadb_allocator_t allocator,  /* Allocator to use */
     const char* pszPath,            /* Pathname of file to open */
     int flags,                      /* Input flags to control the opening */
     posixFile** pp                  /* The file descriptor to fill */
@@ -135,7 +137,7 @@ static int posixOpen(
         }
     }
     
-    p = malloc(sizeof(posixFile) + nPath);
+    p = sakhadb_allocator_allocate(allocator, sizeof(posixFile) + nPath);
     if(p == 0)
     {
         sakhadb_log(SAKHADB_LOGLEVEL_FATAL, "posixOpen: Failed to allocate memory");
@@ -145,6 +147,7 @@ static int posixOpen(
     
     memset(p, 0, sizeof(posixFile));
     
+    p->allocator = allocator;
     p->fd = fd;
     memcpy(p->pszFilename, pszPath, nPath);
     p->pszFilename[nPath] = '\0';
@@ -164,12 +167,11 @@ static int posixClose(
 {
     assert(p);
     if(p->fd > 0)
-    {
         robust_close(p->pszFilename, p->fd);
-    }
     
-    free(p);
-    
+    if(p)
+        sakhadb_allocator_free(p->allocator, p);
+
     return SAKHADB_OK;
 }
 
@@ -293,11 +295,25 @@ static int posixFileSize(
 }
 
 
+/*************** Private Allocator routines  *****************/
+struct Allocator
+{
+    sakhadb_allocator_type_t    type;   /* Type of allocator */
+    void* (*xAllocate)(size_t);
+    void  (*xFree)(void* ptr);
+};
+
+static struct Allocator _default_allocator = { sakhadb_default_allocator, malloc, free };
+
 /******************* Public API routines  ********************/
 
-int sakhadb_file_open(const char* pszFilename, int flags, sakhadb_file_t* ppFile)
+/********************** VFS routines  ************************/
+int sakhadb_file_open(sakhadb_allocator_t allocator,
+                      const char* pszFilename,
+                      int flags,
+                      sakhadb_file_t* ppFile)
 {
-    return posixOpen(pszFilename, flags, (posixFile**)ppFile);
+    return posixOpen(allocator, pszFilename, flags, (posixFile**)ppFile);
 }
 
 int sakhadb_file_close(sakhadb_file_t fd)
@@ -323,5 +339,31 @@ int sakhadb_file_size(sakhadb_file_t fd, int64_t* pSize)
 const char* sakhadb_file_filename(sakhadb_file_t fd)
 {
     return ((posixFile *)fd)->pszFilename;
+}
+
+/******************* Allocator routines  *********************/
+int sakhadb_allocator_get_default(sakhadb_allocator_type_t type, sakhadb_allocator_t* pAllocator)
+{
+    switch (type) {
+        case sakhadb_default_allocator:
+            *pAllocator = &_default_allocator;
+            break;
+            
+        case sakhadb_pool_allocator:
+        default:
+            SLOG_ERROR("sakhadb_allocator_get_default: Unknown type of allocator requested.");
+            return SAKHADB_NOTAVAIL;
+    }
+    return SAKHADB_OK;
+}
+
+void* sakhadb_allocator_allocate(sakhadb_allocator_t allocator, size_t sz)
+{
+    return allocator->xAllocate(sz);
+}
+
+void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr)
+{
+    return allocator->xFree(ptr);
 }
 

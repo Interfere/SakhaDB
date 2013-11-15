@@ -45,12 +45,12 @@ typedef struct Pager* sakhadb_pager_t;
 /**
  * Creates pager. Consider this method as constructor.
  */
-int sakhadb_pager_create(const sakhadb_file_t fd, sakhadb_pager_t* pPager);
+int sakhadb_pager_create(sakhadb_allocator_t, const sakhadb_file_t, sakhadb_pager_t*);
 
 /**
  * Destroy pager. Consider this method as destructor.
  */
-int sakhadb_pager_destroy(sakhadb_pager_t pager);
+int sakhadb_pager_destroy(sakhadb_pager_t);
 
 /**
  * Creates page and reads content from file if available.
