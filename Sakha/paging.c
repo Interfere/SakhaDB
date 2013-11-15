@@ -28,28 +28,19 @@
 #include "sakhadb.h"
 #include "logger.h"
 
-#ifdef __GNUC__
-#define container_of(ptr, type, member) ({ \
-                    const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-                    (type *)( (char *)__mptr - offsetof(type, member) ); })
-#else
-#define container_of(ptr, type, member) ( (type *)((char *)(ptr) - offsetof(type, member)) )
-#endif
-
-#define PTR_TO_PAGE(ptr)            container_of(ptr, struct Page, pData)
-
 struct Page
 {
     struct Pager* pPager;           /* Pager, which this page belongs to */
     Pgno        pageNumber;         /* Page's number */
-    int         nRef;               /* No of references to the current page */
+    int         isDirty;            /* Should be synced */
     char*       pData;              /* Data buffer */
     struct Page *next;              /* Linked list of pages */
+    struct Page *dnext;             /* Dirty next. Useful when page marked as dirty. */
 };
 
 struct PagesHashTable
 {
-    struct Page* _ht[255];
+    struct Page* _ht[1024];         /* Table of pointers */
 };
 
 struct Pager
@@ -63,6 +54,7 @@ struct Pager
     uint16_t        pageSize;       /* Page size for current database */
     
     struct PagesHashTable table;    /* Hash table to store pages */
+    struct Page     *dirty;         /* List of pages to sync */
 };
 
 /**
@@ -93,6 +85,13 @@ static void removePageFromTable(struct Pager* pager, struct Page* page)
             pPage->next = page->next;
         }
     }
+}
+
+static void markAsDirty(struct Page* pPage)
+{
+    pPage->isDirty = 1;
+    pPage->dnext = pPage->pPager->dirty;
+    pPage->pPager->dirty = pPage->dnext;
 }
 
 /**
@@ -127,7 +126,8 @@ static int createPage(
     pPage->pPager = pPager;
     pPage->pageNumber = pageNumber;
     pPage->pData = 0;
-    pPage->nRef = 1;
+    pPage->isDirty = 0;
+    pPage->dnext = 0;
     
     addPageToTable(pPager, pPage);
     
@@ -141,20 +141,8 @@ static int createPage(
 static void destroyPage(struct Page *pPage)
 {
     removePageFromTable(pPage->pPager, pPage);
+    sakhadb_allocator_free(pPage->pPager->contentAllocator, pPage->pData);
     sakhadb_allocator_free(pPage->pPager->allocator, pPage);
-}
-
-static void retainPage(struct Page *pPage)
-{
-    ++pPage->nRef;
-}
-
-static void releasePage(struct Page *pPage)
-{
-    if(--pPage->nRef == 0)
-    {
-        destroyPage(pPage);
-    }
 }
 
 /**
@@ -258,7 +246,25 @@ int sakhadb_pager_destroy(sakhadb_pager_t pager)
     return SAKHADB_OK;
 }
 
-int sakhadb_pager_get_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData)
+int sakhadb_pager_sync(sakhadb_pager_t pager)
+{
+    while (pager->dirty) {
+        int rc = sakhadb_file_write(pager->fd,
+                                    pager->dirty->pData,
+                                    pager->pageSize,
+                                    pager->dirty->pageNumber * pager->pageSize);
+        pager->dirty->isDirty = 0;
+        if(rc != SAKHADB_OK)
+        {
+            SLOG_ERROR("sakhadb_pager_sync: failed to sync page.");
+            return rc;
+        }
+        pager->dirty = pager->dirty->dnext;
+    }
+    return SAKHADB_OK;
+}
+
+int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData)
 {
     if(no == 1)
     {
@@ -279,27 +285,26 @@ int sakhadb_pager_get_page(sakhadb_pager_t pager, Pgno no, int readonly, void** 
         rc = createPage(pager, pager->contentAllocator, no, &pPage);
         if(rc != SAKHADB_OK)
         {
-            SLOG_ERROR("sakhadb_pager_get_page: failed to create page [%d]", no);
+            SLOG_ERROR("sakhadb_pager_request_page: failed to create page [%d]", no);
             return rc;
         }
         
         rc = fetchPageContent(pPage);
         if(rc != SAKHADB_OK)
         {
-            SLOG_ERROR("sakhadb_pager_get_page: failed to fetch page content. [%d]", no);
+            SLOG_ERROR("sakhadb_pager_request_page: failed to fetch page content. [%d]", no);
             goto cleanup;
         }
     }
-    else
-    {
-        retainPage(pPage);
-    }
     
+    if(!readonly)
+    {
+        markAsDirty(pPage);
+    }
     
     *ppData = pPage->pData;
     return SAKHADB_OK;
     
 cleanup:
-    releasePage(pPage);
     return rc;
 }

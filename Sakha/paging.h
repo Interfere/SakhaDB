@@ -53,6 +53,11 @@ int sakhadb_pager_create(sakhadb_allocator_t, const sakhadb_file_t, sakhadb_page
 int sakhadb_pager_destroy(sakhadb_pager_t);
 
 /**
+ * Writes pages to file.
+ */
+int sakhadb_pager_sync(sakhadb_pager_t);
+
+/**
  * Creates page and reads content from file if available.
  *
  * You can request readonly page by specifying corresponding flag.
@@ -62,7 +67,7 @@ int sakhadb_pager_destroy(sakhadb_pager_t);
  * If 'readonly' flag had been unset and page did not present in DB file
  * then routine would create new page with ready-to-use content.
  */
-int sakhadb_pager_get_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData);
+int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData);
 
 
 #endif // _SAKHADB_PAGING_H_
