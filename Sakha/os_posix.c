@@ -64,6 +64,13 @@ struct posixFile
     char pszFilename[1];            /* The file name */
 };
 
+struct Allocator
+{
+    sakhadb_allocator_type_t    type;   /* Type of allocator */
+    void* (*xAllocate)(size_t);
+    void  (*xFree)(void* ptr);
+};
+
 /**
  * Invoke open().  Do so multiple times, until it either succeeds or
  * fails for some reason other than EINTR.
@@ -294,16 +301,8 @@ static int posixFileSize(
     return SAKHADB_OK;
 }
 
-
-/*************** Private Allocator routines  *****************/
-struct Allocator
-{
-    sakhadb_allocator_type_t    type;   /* Type of allocator */
-    void* (*xAllocate)(size_t);
-    void  (*xFree)(void* ptr);
-};
-
-static struct Allocator _default_allocator = { sakhadb_default_allocator, malloc, free };
+/**************** Pool Allocator Implementation **************/
+// Would be
 
 /******************* Public API routines  ********************/
 
@@ -344,12 +343,14 @@ const char* sakhadb_file_filename(sakhadb_file_t fd)
 /******************* Allocator routines  *********************/
 int sakhadb_allocator_get_default(sakhadb_allocator_type_t type, sakhadb_allocator_t* pAllocator)
 {
+    static struct Allocator _default_allocator = { sakhadb_default_allocator, malloc, free };
     switch (type) {
         case sakhadb_default_allocator:
             *pAllocator = &_default_allocator;
             break;
             
         case sakhadb_pool_allocator:
+            
         default:
             SLOG_ERROR("sakhadb_allocator_get_default: Unknown type of allocator requested.");
             return SAKHADB_NOTAVAIL;
