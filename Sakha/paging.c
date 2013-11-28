@@ -28,6 +28,23 @@
 #include "sakhadb.h"
 #include "logger.h"
 
+/**
+ * Turn on/off logging for file routines
+ */
+#define SLOG_PAGING_ENABLE    1
+
+#if SLOG_PAGING_ENABLE
+#define SLOG_PAGING_INFO  SLOG_INFO
+#define SLOG_PAGING_WARN  SLOG_WARN
+#define SLOG_PAGING_ERROR SLOG_ERROR
+#define SLOG_PAGING_FATAL SLOG_FATAL
+#else // SLOG_FILE_ENABLE
+#define SLOG_PAGING_INFO(...)
+#define SLOG_PAGING_WARN(...)
+#define SLOG_PAGING_ERROR(...)
+#define SLOG_PAGING_FATAL(...)
+#endif // SLOG_FILE_ENABLE
+
 struct Page
 {
     struct Pager* pPager;           /* Pager, which this page belongs to */
@@ -89,6 +106,7 @@ static void removePageFromTable(struct Pager* pager, struct Page* page)
 
 static void markAsDirty(struct Page* pPage)
 {
+    SLOG_PAGING_INFO("markAsDirty: mark page as dirty [%lld]", pPage->pageNumber);
     pPage->isDirty = 1;
     pPage->dnext = pPage->pPager->dirty;
     pPage->pPager->dirty = pPage->dnext;
@@ -111,7 +129,6 @@ static struct Page* lookupPageInTable(struct Pager* pager, Pgno no)
  */
 static int createPage(
     struct Pager *pPager,           /* Pager object, that owns the page */
-    sakhadb_allocator_t dataAllocator, /* Allocator for page data */
     Pgno pageNumber,                /* Number of the page */
     struct Page **ppPage
 )
@@ -119,7 +136,7 @@ static int createPage(
     struct Page *pPage = (struct Page *)sakhadb_allocator_allocate(pPager->allocator, sizeof(struct Page));
     if(!pPage)
     {
-        SLOG_FATAL("createPage: failed to allocate memory for Page object.");
+        SLOG_PAGING_FATAL("createPage: failed to allocate memory for Page object.");
         return SAKHADB_NOMEM;
     }
     
@@ -163,7 +180,7 @@ static int fetchPageContent(struct Page *pPage)
     pPage->pData = sakhadb_allocator_allocate(pPage->pPager->contentAllocator, pageSize);
     if(!pPage->pData)
     {
-        SLOG_FATAL("fetchPageContent: failed to pre-allocate buffer for page content.");
+        SLOG_PAGING_FATAL("fetchPageContent: failed to pre-allocate buffer for page content.");
         return SAKHADB_NOMEM;
     }
     
@@ -177,18 +194,19 @@ static int fetchPageContent(struct Page *pPage)
 
 /******************* Public API routines  ********************/
 
-int sakhadb_pager_create(sakhadb_allocator_t allocator,
-                         const sakhadb_file_t fd,
+int sakhadb_pager_create(const sakhadb_file_t fd,
                          sakhadb_pager_t* pPager)
 {
-    struct Pager* pager = (struct Pager*)sakhadb_allocator_allocate(allocator, sizeof(struct Pager));
+    SLOG_PAGING_INFO("sakhadb_pager_create: creating pager.");
+    sakhadb_allocator_t default_allocator = sakhadb_allocator_get_default();
+    struct Pager* pager = (struct Pager*)sakhadb_allocator_allocate(default_allocator, sizeof(struct Pager));
     if(!pager)
     {
-        SLOG_FATAL("sakhadb_pager_create: failed to allocate memory for pager");
+        SLOG_PAGING_FATAL("sakhadb_pager_create: failed to allocate memory for pager");
         return SAKHADB_NOMEM;
     }
     
-    pager->allocator = allocator;
+    pager->allocator = default_allocator;
     pager->fd = fd;
     pager->pageSize = SAKHADB_DEFAULT_PAGE_SIZE;
     
@@ -196,37 +214,34 @@ int sakhadb_pager_create(sakhadb_allocator_t allocator,
     int rc = sakhadb_file_size(fd, &fileSize);
     if(rc != SAKHADB_OK)
     {
-        SLOG_FATAL("sakhadb_pager_create: failed to get file size. [%s]", sakhadb_file_filename(fd));
+        SLOG_PAGING_FATAL("sakhadb_pager_create: failed to get file size. [%s]", sakhadb_file_filename(fd));
         goto cleanup;
     }
+    
+    SLOG_PAGING_INFO("sakhadb_pager_create: got size of file [%lld].", fileSize);
     
     pager->fileSize = (Pgno)(fileSize/pager->pageSize);
     pager->dbSize = pager->fileSize?pager->fileSize:1;
     memset(pager->table._ht, 0, sizeof(pager->table._ht));
     
-    rc = sakhadb_allocator_get_default(sakhadb_default_allocator, &pager->contentAllocator);
+    pager->contentAllocator = sakhadb_allocator_get_default();
+    rc = createPage(pager, 1, &pager->page1);
     if(rc != SAKHADB_OK)
     {
-        SLOG_FATAL("sakhadb_pager_create: failed to get default allocator for page content.");
+        SLOG_PAGING_FATAL("sakhadb_pager_create: failed to create page 1. [%s]");
         goto cleanup;
     }
     
-    rc = createPage(pager, pager->contentAllocator, 1, &pager->page1);
+    SLOG_PAGING_INFO("sakhadb_pager_create: created page1");
+    
+    rc = fetchPageContent(pager->page1);
     if(rc != SAKHADB_OK)
     {
-        SLOG_FATAL("sakhadb_pager_create: failed to create page 1. [%s]");
-        goto cleanup;
+        SLOG_PAGING_FATAL("sakhadb_pager_create: failed to fetch data for page 1.");
+        goto fetch_failed;
     }
     
-    if(pager->fileSize > 0)
-    {
-        rc = fetchPageContent(pager->page1);
-        if(rc != SAKHADB_OK)
-        {
-            SLOG_FATAL("sakhadb_pager_create: failed to fetch data for page 1.");
-            goto fetch_failed;
-        }
-    }
+    SLOG_PAGING_INFO("sakhadb_pager_create: fetched content for page1");
     
     *pPager = pager;
     return SAKHADB_OK;
@@ -235,12 +250,13 @@ fetch_failed:
     destroyPage(pager->page1);
     
 cleanup:
-    sakhadb_allocator_free(allocator, pager);
+    sakhadb_allocator_free(default_allocator, pager);
     return rc;
 }
 
 int sakhadb_pager_destroy(sakhadb_pager_t pager)
 {
+    SLOG_PAGING_INFO("sakhadb_pager_destroy: destroying pager.");
     destroyPage(pager->page1);
     sakhadb_allocator_free(pager->allocator, pager);
     return SAKHADB_OK;
@@ -248,6 +264,7 @@ int sakhadb_pager_destroy(sakhadb_pager_t pager)
 
 int sakhadb_pager_sync(sakhadb_pager_t pager)
 {
+    SLOG_PAGING_INFO("sakhadb_pager_sync: syncing pager.");
     while (pager->dirty) {
         int rc = sakhadb_file_write(pager->fd,
                                     pager->dirty->pData,
@@ -256,7 +273,7 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
         pager->dirty->isDirty = 0;
         if(rc != SAKHADB_OK)
         {
-            SLOG_ERROR("sakhadb_pager_sync: failed to sync page.");
+            SLOG_PAGING_ERROR("sakhadb_pager_sync: failed to sync page.");
             return rc;
         }
         pager->dirty = pager->dirty->dnext;
@@ -266,6 +283,7 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
 
 int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData)
 {
+    SLOG_PAGING_INFO("sakhadb_pager_request_page: requesting page [%d][%s]", no, readonly?"r":"rw");
     if(no == 1)
     {
         *ppData = pager->page1->pData;
@@ -275,24 +293,29 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, voi
     int isNew = no > pager->dbSize;
     if(readonly && isNew)
     {
+        SLOG_PAGING_WARN("sakhadb_pager_request_page: requested non-existing readonly page.");
         return SAKHADB_NOTAVAIL;
     }
     
     int rc = SAKHADB_OK;
+    
+    SLOG_PAGING_INFO("sakhadb_pager_request_page: looking for page in table.");
     struct Page* pPage = lookupPageInTable(pager, no);
     if(!pPage)
     {
-        rc = createPage(pager, pager->contentAllocator, no, &pPage);
+        SLOG_PAGING_INFO("sakhadb_pager_request_page: page not found. create new.");
+        rc = createPage(pager, no, &pPage);
         if(rc != SAKHADB_OK)
         {
-            SLOG_ERROR("sakhadb_pager_request_page: failed to create page [%d]", no);
+            SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to create page [%d]", no);
             return rc;
         }
         
+        SLOG_PAGING_INFO("sakhadb_pager_request_page: fetch page content");
         rc = fetchPageContent(pPage);
         if(rc != SAKHADB_OK)
         {
-            SLOG_ERROR("sakhadb_pager_request_page: failed to fetch page content. [%d]", no);
+            SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to fetch page content. [%d]", no);
             goto cleanup;
         }
     }

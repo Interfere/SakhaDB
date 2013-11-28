@@ -36,13 +36,8 @@ struct sakhadb
 
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
 {
-    sakhadb_allocator_t default_allocator;
-    int rc = sakhadb_allocator_get_default(sakhadb_default_allocator, &default_allocator);
-    if(rc != SAKHADB_OK)
-    {
-        SLOG_FATAL("sakhadb_open: failed to get default allocator.");
-        return rc;
-    }
+    SLOG_INFO("sakhadb_open: opening database [%s]", filename);
+    sakhadb_allocator_t default_allocator = sakhadb_allocator_get_default();
     sakhadb *db = (sakhadb*)sakhadb_allocator_allocate(default_allocator, sizeof(sakhadb));
     if(!db)
     {
@@ -52,14 +47,14 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
     memset(db, 0, sizeof(sakhadb));
     
     db->allocator = default_allocator;
-    rc = sakhadb_file_open(default_allocator, filename, SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &db->h);
+    int rc = sakhadb_file_open(filename, SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &db->h);
     if(rc != SAKHADB_OK)
     {
         SLOG_FATAL("sakhadb_open: failed to open file [code:%d][%s][flags:%d]", rc, filename, flags);
         goto file_open_failed;
     }
     
-    rc = sakhadb_pager_create(default_allocator, db->h, &db->pager);
+    rc = sakhadb_pager_create(db->h, &db->pager);
     if(rc != SAKHADB_OK)
     {
         SLOG_FATAL("sakhadb_open: failed to create pager [code:%d]", rc);
@@ -79,6 +74,7 @@ file_open_failed:
 
 int sakhadb_close(sakhadb* db)
 {
+    SLOG_INFO("sakhadb_close: closing database");
     int rc = sakhadb_pager_destroy(db->pager);
     if(rc != SAKHADB_OK)
     {

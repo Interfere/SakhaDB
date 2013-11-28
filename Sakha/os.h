@@ -46,7 +46,7 @@ typedef struct Allocator* sakhadb_allocator_t;
 /**
  * Routines for working with FS
  */
-int sakhadb_file_open(sakhadb_allocator_t, const char*, int, sakhadb_file_t*);
+int sakhadb_file_open(const char*, int, sakhadb_file_t*);
 int sakhadb_file_close(sakhadb_file_t);
 
 int sakhadb_file_read(sakhadb_file_t, void*, int, int64_t);
@@ -56,18 +56,9 @@ int sakhadb_file_size(sakhadb_file_t, int64_t*);
 const char* sakhadb_file_filename(sakhadb_file_t);
 
 /**
- * Allocators types
- */
-typedef enum
-{
-    sakhadb_default_allocator = 0,
-    sakhadb_pool_allocator
-} sakhadb_allocator_type_t;
-
-/**
  * Create allocator.
  */
-int sakhadb_allocator_get_default(sakhadb_allocator_type_t type, sakhadb_allocator_t* pAllocator);
+sakhadb_allocator_t sakhadb_allocator_get_default();
 
 void* sakhadb_allocator_allocate(sakhadb_allocator_t allocator, size_t sz);
 void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr);

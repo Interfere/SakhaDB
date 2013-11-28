@@ -32,6 +32,24 @@
 
 #include "logger.h"
 #include "sakhadb.h"
+#include "os.h"
+
+/**
+ * Turn on/off logging for file routines
+ */
+#define SLOG_OS_ENABLE    1
+
+#if SLOG_OS_ENABLE
+#define SLOG_OS_INFO  SLOG_INFO
+#define SLOG_OS_WARN  SLOG_WARN
+#define SLOG_OS_ERROR SLOG_ERROR
+#define SLOG_OS_FATAL SLOG_FATAL
+#else // SLOG_FILE_ENABLE
+#define SLOG_OS_INFO(...)
+#define SLOG_OS_WARN(...)
+#define SLOG_OS_ERROR(...)
+#define SLOG_OS_FATAL(...)
+#endif // SLOG_FILE_ENABLE
 
 /**
  * Default open mode for SakhaDB
@@ -66,7 +84,6 @@ struct posixFile
 
 struct Allocator
 {
-    sakhadb_allocator_type_t    type;   /* Type of allocator */
     void* (*xAllocate)(size_t);
     void  (*xFree)(void* ptr);
 };
@@ -109,7 +126,6 @@ static void robust_close(const char* psz, int h)
  * Opens file POSIX-style
  */
 static int posixOpen(
-    sakhadb_allocator_t allocator,  /* Allocator to use */
     const char* pszPath,            /* Pathname of file to open */
     int flags,                      /* Input flags to control the opening */
     posixFile** pp                  /* The file descriptor to fill */
@@ -138,23 +154,24 @@ static int posixOpen(
         fd = robust_open(pszPath, internalFlags, 0);
         if(fd < 0)
         {
-            sakhadb_log(SAKHADB_LOGLEVEL_FATAL, "posixOpen: failed to open file [%s]", pszPath);
+            SLOG_OS_FATAL("posixOpen: failed to open file [%s]", pszPath);
             rc = SAKHADB_CANTOPEN;
             goto open_finished;
         }
     }
     
-    p = sakhadb_allocator_allocate(allocator, sizeof(posixFile) + nPath);
+    sakhadb_allocator_t default_allocator = sakhadb_allocator_get_default();
+    p = sakhadb_allocator_allocate(default_allocator, sizeof(posixFile) + nPath);
     if(p == 0)
     {
-        sakhadb_log(SAKHADB_LOGLEVEL_FATAL, "posixOpen: Failed to allocate memory");
+        SLOG_OS_FATAL("posixOpen: Failed to allocate memory");
         rc = SAKHADB_NOMEM;
         goto open_finished;
     }
     
     memset(p, 0, sizeof(posixFile));
     
-    p->allocator = allocator;
+    p->allocator = default_allocator;
     p->fd = fd;
     memcpy(p->pszFilename, pszPath, nPath);
     p->pszFilename[nPath] = '\0';
@@ -196,7 +213,7 @@ static long seekAndRead(posixFile* p, void* pBuf, int amt, int64_t offset)
 
     long got = read(p->fd, pBuf, amt);
     
-    SLOG_INFO("READ    %-3d %5ld %7lld", p->fd, got, offset);
+    SLOG_OS_INFO("READ    %-3d %5ld %7lld", p->fd, got, offset);
     
     return got;
 }
@@ -215,7 +232,7 @@ static long seekAndWrite(posixFile* p, const void* pBuf, int amt, int64_t offset
     
     long written = write(p->fd, pBuf, amt);
     
-    SLOG_INFO("WRITE   %-3d %5ld %7lld", p->fd, written, offset);
+    SLOG_OS_INFO("WRITE   %-3d %5ld %7lld", p->fd, written, offset);
     return written;
 }
 
@@ -293,7 +310,7 @@ static int posixFileSize(
     int rc = fstat(p->fd, &buf);
     if(rc)
     {
-        SLOG_ERROR("posixFileSize: 'fstat' failed [code: %d][%s]", errno, strerror(errno));
+        SLOG_OS_ERROR("posixFileSize: 'fstat' failed [code: %d][%s]", errno, strerror(errno));
         return SAKHADB_IOERR_FSTAT;
     }
     *pSize = buf.st_size;
@@ -307,31 +324,37 @@ static int posixFileSize(
 /******************* Public API routines  ********************/
 
 /********************** VFS routines  ************************/
-int sakhadb_file_open(sakhadb_allocator_t allocator,
-                      const char* pszFilename,
+int sakhadb_file_open(const char* pszFilename,
                       int flags,
                       sakhadb_file_t* ppFile)
 {
-    return posixOpen(allocator, pszFilename, flags, (posixFile**)ppFile);
+    SLOG_OS_INFO("sakhadb_file_open: opening file [%s]", pszFilename);
+    return posixOpen(pszFilename, flags, (posixFile**)ppFile);
 }
 
 int sakhadb_file_close(sakhadb_file_t fd)
 {
+    SLOG_OS_INFO("sakhadb_file_close: closing file [%s]", sakhadb_file_filename(fd));
     return posixClose((posixFile*)fd);
 }
 
 int sakhadb_file_read(sakhadb_file_t fd, void* pBuf, int amt, int64_t offset)
 {
+    SLOG_OS_INFO("sakhadb_file_read: reading from file [%s][len: %d][off: %lld]",
+              sakhadb_file_filename(fd), amt, offset);
     return posixRead((posixFile*)fd, pBuf, amt, offset);
 }
 
 int sakhadb_file_write(sakhadb_file_t fd, const void* pBuf, int amt, int64_t offset)
 {
+    SLOG_OS_INFO("sakhadb_file_write: writing to file [%s][len: %d][off: %lld]",
+              sakhadb_file_filename(fd), amt, offset);
     return posixWrite((posixFile*)fd, pBuf, amt, offset);
 }
 
 int sakhadb_file_size(sakhadb_file_t fd, int64_t* pSize)
 {
+    SLOG_OS_INFO("sakhadb_file_size: [%s]", sakhadb_file_filename(fd));
     return posixFileSize((posixFile *)fd, pSize);
 }
 
@@ -341,21 +364,10 @@ const char* sakhadb_file_filename(sakhadb_file_t fd)
 }
 
 /******************* Allocator routines  *********************/
-int sakhadb_allocator_get_default(sakhadb_allocator_type_t type, sakhadb_allocator_t* pAllocator)
+sakhadb_allocator_t sakhadb_allocator_get_default()
 {
-    static struct Allocator _default_allocator = { sakhadb_default_allocator, malloc, free };
-    switch (type) {
-        case sakhadb_default_allocator:
-            *pAllocator = &_default_allocator;
-            break;
-            
-        case sakhadb_pool_allocator:
-            
-        default:
-            SLOG_ERROR("sakhadb_allocator_get_default: Unknown type of allocator requested.");
-            return SAKHADB_NOTAVAIL;
-    }
-    return SAKHADB_OK;
+    static struct Allocator _default_allocator = { malloc, free };
+    return &_default_allocator;
 }
 
 void* sakhadb_allocator_allocate(sakhadb_allocator_t allocator, size_t sz)
