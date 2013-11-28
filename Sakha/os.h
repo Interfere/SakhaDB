@@ -59,6 +59,8 @@ const char* sakhadb_file_filename(sakhadb_file_t);
  * Create allocator.
  */
 sakhadb_allocator_t sakhadb_allocator_get_default();
+int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocator_t*);
+int sakhadb_allocator_destroy_pool(sakhadb_allocator_t);
 
 void* sakhadb_allocator_allocate(sakhadb_allocator_t allocator, size_t sz);
 void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr);

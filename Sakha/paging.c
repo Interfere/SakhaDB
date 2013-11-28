@@ -224,12 +224,17 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
     pager->dbSize = pager->fileSize?pager->fileSize:1;
     memset(pager->table._ht, 0, sizeof(pager->table._ht));
     
-    pager->contentAllocator = sakhadb_allocator_get_default();
+    rc = sakhadb_allocator_create_pool(pager->pageSize, 1024, &pager->contentAllocator);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_PAGING_ERROR("sakhadb_pager_create: failed to create pool allocator.");
+        goto allocator_failed;
+    }
     rc = createPage(pager, 1, &pager->page1);
     if(rc != SAKHADB_OK)
     {
         SLOG_PAGING_FATAL("sakhadb_pager_create: failed to create page 1. [%s]");
-        goto cleanup;
+        goto allocator_failed;
     }
     
     SLOG_PAGING_INFO("sakhadb_pager_create: created page1");
@@ -248,6 +253,9 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
     
 fetch_failed:
     destroyPage(pager->page1);
+    
+allocator_failed:
+    sakhadb_allocator_destroy_pool(pager->contentAllocator);
     
 cleanup:
     sakhadb_allocator_free(default_allocator, pager);

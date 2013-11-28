@@ -29,6 +29,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6C1F2FDE184741780078DC4F /* llist.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = llist.h; sourceTree = "<group>"; };
 		6C2CACA718338E6F007ACC65 /* sakhadb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sakhadb.c; sourceTree = "<group>"; };
 		6C3A2C20182D2E280092E169 /* logger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = logger.c; sourceTree = "<group>"; };
 		6C3A2C22182D2E340092E169 /* logger.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = logger.h; sourceTree = "<group>"; };
@@ -73,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				6CF34938182BD10E00887952 /* Sakha.1 */,
+				6C1F2FDE184741780078DC4F /* llist.h */,
 				6C3A2C22182D2E340092E169 /* logger.h */,
 				6C3A2C20182D2E280092E169 /* logger.c */,
 				6CF34936182BD10E00887952 /* main.c */,
