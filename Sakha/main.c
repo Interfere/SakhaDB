@@ -19,7 +19,6 @@
 // THE SOFTWARE.
 
 #include "sakhadb.h"
-#include "paging.h"
 
 int main(int argc, const char * argv[])
 {

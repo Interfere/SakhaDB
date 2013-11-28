@@ -48,7 +48,7 @@
 struct Page
 {
     struct Pager* pPager;           /* Pager, which this page belongs to */
-    Pgno        pageNumber;         /* Page's number */
+    Pgno        pageNumber;         /* Number of the page */
     int         isDirty;            /* Should be synced */
     char*       pData;              /* Data buffer */
     struct Page *next;              /* Linked list of pages */
@@ -73,6 +73,19 @@ struct Pager
     struct PagesHashTable table;    /* Hash table to store pages */
     struct Page     *dirty;         /* List of pages to sync */
 };
+
+/**
+ * Database header.
+ */
+struct Header
+{
+    char            id[16];         /* Magic string */
+    uint16_t        pageSize;       /* Actual page size for current DB */
+    char            reserved1[2];
+    uint32_t        dbVersion;      /* Version of Database */
+    char            reserved2[40];  /* Reserved for future */
+};
+
 
 /**
  * Add a page into hash table. No-op if page exists.
@@ -109,7 +122,7 @@ static void markAsDirty(struct Page* pPage)
     SLOG_PAGING_INFO("markAsDirty: mark page as dirty [%lld]", pPage->pageNumber);
     pPage->isDirty = 1;
     pPage->dnext = pPage->pPager->dirty;
-    pPage->pPager->dirty = pPage->dnext;
+    pPage->pPager->dirty = pPage;
 }
 
 /**
@@ -176,8 +189,11 @@ static int fetchPageContent(struct Page *pPage)
     int rc = SAKHADB_OK;
     
     /* Pre-allocate buffer for content */
-    assert(pPage->pData == 0);
-    pPage->pData = sakhadb_allocator_allocate(pPage->pPager->contentAllocator, pageSize);
+    if(!pPage->pData)
+    {
+        pPage->pData = sakhadb_allocator_allocate(pPage->pPager->contentAllocator, pageSize);
+    }
+    
     if(!pPage->pData)
     {
         SLOG_PAGING_FATAL("fetchPageContent: failed to pre-allocate buffer for page content.");
@@ -190,6 +206,56 @@ static int fetchPageContent(struct Page *pPage)
         rc = sakhadb_file_read(pPage->pPager->fd, pPage->pData, pageSize, offset);
     }
     return rc;
+}
+
+/**
+ * Acquire DB header.
+ */
+static int acquireHeader(
+    struct Pager* pager
+)
+{
+    /* Page 1 must be loaded before this call */
+    struct Page* page1 = pager->page1;
+    assert(page1);
+    
+    struct Header *header = (struct Header *)page1->pData;
+    if(pager->dbSize == 1 && pager->fileSize == 0)
+    {
+        // No page on disk. Create header.
+        memset(header->id, 0, sizeof(header->id));
+        strncpy(header->id, SAKHADB_FILE_HEADER, sizeof(header->id));
+        header->pageSize = pager->pageSize;
+        header->reserved1[0] = header->reserved1[1] = 0;
+        header->dbVersion = SAKHADB_VERSION_NUMBER;
+        memset(header->reserved2, 0, sizeof(header->reserved2));
+        
+        markAsDirty(page1);
+    }
+    else
+    {
+        // Compare values
+        if(strncmp(header->id, SAKHADB_FILE_HEADER, sizeof(header->id)) != 0)
+        {
+            SLOG_PAGING_FATAL("acquireHeader: file header do not match");
+            return SAKHADB_NOTADB;
+        }
+        
+        if(header->dbVersion > SAKHADB_VERSION_NUMBER)
+        {
+            SLOG_PAGING_ERROR("acquireHeader: creator version is higher than reader's.");
+            return SAKHADB_CANTOPEN;
+        }
+        
+        uint16_t pageSize = header->pageSize;
+        if(pageSize != pager->pageSize)
+        {
+            SLOG_PAGING_WARN("acquireHeader: page size do not match.");
+            pager->pageSize = pageSize;
+            fetchPageContent(page1);
+        }
+    }
+    return SAKHADB_OK;
 }
 
 /******************* Public API routines  ********************/
@@ -247,6 +313,11 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
     }
     
     SLOG_PAGING_INFO("sakhadb_pager_create: fetched content for page1");
+    rc = acquireHeader(pager);
+    if(rc != SAKHADB_OK)
+    {
+        goto fetch_failed;
+    }
     
     *pPager = pager;
     return SAKHADB_OK;
@@ -277,7 +348,7 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
         int rc = sakhadb_file_write(pager->fd,
                                     pager->dirty->pData,
                                     pager->pageSize,
-                                    pager->dirty->pageNumber * pager->pageSize);
+                                    (pager->dirty->pageNumber-1) * pager->pageSize);
         pager->dirty->isDirty = 0;
         if(rc != SAKHADB_OK)
         {

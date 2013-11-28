@@ -26,7 +26,14 @@
  * Sakha database in order to identify the file as a real dsatabase.
  */
 #ifndef SAKHADB_FILE_HEADER /* 123456789 123456 */
-#  define SAKHADB_FILE_HEADER "SakhaDB format 1"
+#  define SAKHADB_FILE_HEADER "SakhaDB ver 1"
+#endif
+
+/**
+ * This is a version of SakhaDB.
+ */
+#ifndef SAKHADB_VERSION_NUMBER
+#   define SAKHADB_VERSION_NUMBER 000001
 #endif
 
 /**
@@ -64,6 +71,7 @@ int sakhadb_close(sakhadb* db);
 #define SAKHADB_IOERR_FSTAT         7
 #define SAKHADB_FULL                8 /* Insertion failed because database is full */
 #define SAKHADB_NOTAVAIL            9 /* Requesting page is not available */
+#define SAKHADB_NOTADB             10 /* File is not a valid DB */
 
 
 #endif // _SAKHADB_H_
