@@ -42,16 +42,16 @@
 #define SLOG_OS_ENABLE    1
 
 #if SLOG_OS_ENABLE
-#define SLOG_OS_INFO  SLOG_INFO
-#define SLOG_OS_WARN  SLOG_WARN
-#define SLOG_OS_ERROR SLOG_ERROR
-#define SLOG_OS_FATAL SLOG_FATAL
-#else // SLOG_FILE_ENABLE
-#define SLOG_OS_INFO(...)
-#define SLOG_OS_WARN(...)
-#define SLOG_OS_ERROR(...)
-#define SLOG_OS_FATAL(...)
-#endif // SLOG_FILE_ENABLE
+#   define SLOG_OS_INFO  SLOG_INFO
+# define SLOG_OS_WARN  SLOG_WARN
+#   define SLOG_OS_ERROR SLOG_ERROR
+#   define SLOG_OS_FATAL SLOG_FATAL
+#else // SLOG_OS_ENABLE
+#   define SLOG_OS_INFO(...)
+#   define SLOG_OS_WARN(...)
+#   define SLOG_OS_ERROR(...)
+#   define SLOG_OS_FATAL(...)
+#endif // SLOG_OS_ENABLE
 
 /**
  * Default open mode for SakhaDB
@@ -150,7 +150,7 @@ static int posixOpen(
         fd = robust_open(pszPath, internalFlags, 0);
         if(fd < 0)
         {
-            SLOG_OS_FATAL("posixOpen: failed to open file [%s]", pszPath);
+            SLOG_OS_FATAL("posixOpen: failed to open file [%s][error:%s]", pszPath, strerror(errno));
             rc = SAKHADB_CANTOPEN;
             goto open_finished;
         }

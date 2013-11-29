@@ -27,6 +27,23 @@
 #include "sakhadb.h"
 #include "llist.h"
 
+/**
+ * Turn on/off logging for paging routines
+ */
+#define SLOG_ALLOCATOR_ENABLE    0
+
+#if SLOG_ALLOCATOR_ENABLE
+#   define SLOG_ALLOCATOR_INFO  SLOG_INFO
+#   define SLOG_ALLOCATOR_WARN  SLOG_WARN
+#   define SLOG_ALLOCATOR_ERROR SLOG_ERROR
+#   define SLOG_ALLOCATOR_FATAL SLOG_FATAL
+#else // SLOG_ALLOCATOR_ENABLE
+#   define SLOG_ALLOCATOR_INFO(...)
+#   define SLOG_ALLOCATOR_WARN(...)
+#   define SLOG_ALLOCATOR_ERROR(...)
+#   define SLOG_ALLOCATOR_FATAL(...)
+#endif // SLOG_ALLOCATOR_ENABLE
+
 /********************** Default Allocator Implementation **********************/
 struct Allocator
 {
@@ -91,14 +108,14 @@ void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr)
 
 int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocator_t* pAllocator)
 {
-    SLOG_INFO("sakhadb_allocator_create_pool: create pool allocator [chunk:%u][count:%d]", chunkSize, nChunks);
+    SLOG_ALLOCATOR_INFO("sakhadb_allocator_create_pool: create pool allocator [chunk:%u][count:%d]", chunkSize, nChunks);
     assert(chunkSize < 8192 && chunkSize > 128);
     
     size_t poolSize = chunkSize * nChunks;
     char* poolBuffer = sakhadb_allocator_allocate(sakhadb_allocator_get_default(), sizeof(struct PoolAllocator) + poolSize);
     if(!poolBuffer)
     {
-        SLOG_FATAL("sakhadb_allocator_create_pool: failed to allocate memory.");
+        SLOG_ALLOCATOR_FATAL("sakhadb_allocator_create_pool: failed to allocate memory.");
         return SAKHADB_NOMEM;
     }
     
@@ -126,7 +143,7 @@ int sakhadb_allocator_destroy_pool(sakhadb_allocator_t allocator)
 {
     assert(allocator != sakhadb_allocator_get_default());
     
-    SLOG_INFO("sakhadb_allocator_destroy: destroy pool allocator");
+    SLOG_ALLOCATOR_INFO("sakhadb_allocator_destroy: destroy pool allocator");
     sakhadb_allocator_free(sakhadb_allocator_get_default(), allocator);
     
     return SAKHADB_OK;

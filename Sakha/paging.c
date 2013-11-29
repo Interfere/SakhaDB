@@ -30,21 +30,21 @@
 #include "allocator.h"
 
 /**
- * Turn on/off logging for file routines
+ * Turn on/off logging for paging routines
  */
 #define SLOG_PAGING_ENABLE    1
 
 #if SLOG_PAGING_ENABLE
-#define SLOG_PAGING_INFO  SLOG_INFO
-#define SLOG_PAGING_WARN  SLOG_WARN
-#define SLOG_PAGING_ERROR SLOG_ERROR
-#define SLOG_PAGING_FATAL SLOG_FATAL
-#else // SLOG_FILE_ENABLE
-#define SLOG_PAGING_INFO(...)
-#define SLOG_PAGING_WARN(...)
-#define SLOG_PAGING_ERROR(...)
-#define SLOG_PAGING_FATAL(...)
-#endif // SLOG_FILE_ENABLE
+#   define SLOG_PAGING_INFO  SLOG_INFO
+#   define SLOG_PAGING_WARN  SLOG_WARN
+#   define SLOG_PAGING_ERROR SLOG_ERROR
+#   define SLOG_PAGING_FATAL SLOG_FATAL
+#else // SLOG_PAGING_ENABLE
+#   define SLOG_PAGING_INFO(...)
+#   define SLOG_PAGING_WARN(...)
+#   define SLOG_PAGING_ERROR(...)
+#   define SLOG_PAGING_FATAL(...)
+#endif // SLOG_PAGING_ENABLE
 
 struct Page
 {
