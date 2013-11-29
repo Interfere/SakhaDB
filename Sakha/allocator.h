@@ -18,36 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _SAKHADB_OS_H_
-#define _SAKHADB_OS_H_
+#ifndef _SAKHADB_ALLOCATOR_H_
+#define _SAKHADB_ALLOCATOR_H_
 
-#include <stdint.h>
-#include <stdio.h>
-
-/**
- * File handler
- */
-typedef struct sakhadb_file* sakhadb_file_t;
+#include <stdlib.h>
 
 /**
- * Flags to open the file
+ * Allocator type to use in SakhaDB internals
  */
-#define SAKHADB_OPEN_READ       0x1
-#define SAKHADB_OPEN_WRITE      0x2
-#define SAKHADB_OPEN_READWRITE  (SAKHADB_OPEN_READ|SAKHADB_OPEN_WRITE)
-#define SAKHADB_OPEN_CREATE     0x4
-#define SAKHADB_OPEN_EXCLUSIVE  0x8
+typedef struct Allocator* sakhadb_allocator_t;
 
 /**
- * Routines for working with FS
+ * Default allocator accessor. Represents basic allocation routines, such as
+ * malloc() and free().
  */
-int sakhadb_file_open(const char*, int, sakhadb_file_t*);
-int sakhadb_file_close(sakhadb_file_t);
+sakhadb_allocator_t sakhadb_allocator_get_default();
 
-int sakhadb_file_read(sakhadb_file_t, void*, int, int64_t);
-int sakhadb_file_write(sakhadb_file_t, const void*, int, int64_t);
+/**
+ * Constructor and Destructor for pool allocator. Used as main allocator 
+ * for internal storage of page chache module.
+ */
+int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocator_t*);
+int sakhadb_allocator_destroy_pool(sakhadb_allocator_t);
 
-int sakhadb_file_size(sakhadb_file_t, int64_t*);
-const char* sakhadb_file_filename(sakhadb_file_t);
+/**
+ * Alloc() and Free() routines that encapsulates allocator-related internals.
+ */
+void* sakhadb_allocator_allocate(sakhadb_allocator_t, size_t);
+void sakhadb_allocator_free(sakhadb_allocator_t, void*);
 
-#endif // _SAKHADB_OS_H_
+#endif // _SAKHADB_ALLOCATOR_H_

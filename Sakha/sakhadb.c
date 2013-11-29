@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "logger.h"
+#include "allocator.h"
 #include "os.h"
 #include "paging.h"
 

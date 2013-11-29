@@ -27,6 +27,7 @@
 
 #include "sakhadb.h"
 #include "logger.h"
+#include "allocator.h"
 
 /**
  * Turn on/off logging for file routines
@@ -98,6 +99,9 @@ static void addPageToTable(struct Pager* pager, struct Page* page)
     pager->table._ht[hash] = page;
 }
 
+/**
+ * Remove page from hash table. HashTable must contain the page.
+ */
 static void removePageFromTable(struct Pager* pager, struct Page* page)
 {
     assert(page);
@@ -202,7 +206,7 @@ static int fetchPageContent(struct Page *pPage)
     
     if(pageNumber <= pPage->pPager->fileSize)
     {
-        int64_t offset = (int64_t)pageNumber * pageSize;
+        int64_t offset = (int64_t)(pageNumber-1) * pageSize;
         rc = sakhadb_file_read(pPage->pPager->fd, pPage->pData, pageSize, offset);
     }
     return rc;

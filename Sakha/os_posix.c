@@ -34,7 +34,7 @@
 #include "logger.h"
 #include "sakhadb.h"
 #include "os.h"
-#include "llist.h"
+#include "allocator.h"
 
 /**
  * Turn on/off logging for file routines
@@ -82,12 +82,6 @@ struct posixFile
     sakhadb_allocator_t allocator;  /* Allocator to use */
     int fd;                         /* The file descriptor */
     char pszFilename[1];            /* The file name */
-};
-
-struct Allocator
-{
-    void* (*xAllocate)(struct Allocator*, size_t);
-    void  (*xFree)(struct Allocator*, void* ptr);
 };
 
 /**
@@ -320,48 +314,8 @@ static int posixFileSize(
     return SAKHADB_OK;
 }
 
-/************** Default Allocator Implementation *************/
-void* defaultMalloc(struct Allocator* pAllocator, size_t sz)
-{
-    return malloc(sz);
-}
-
-void defaultFree(struct Allocator* pAllocator, void* ptr)
-{
-    free(ptr);
-}
-
-/**************** Pool Allocator Implementation **************/
-struct PoolAllocator
-{
-    void* (*xAllocate)(struct Allocator*, size_t);
-    void  (*xFree)(struct Allocator*, void* ptr);
-    void*   pool;
-    size_t  poolSize;
-    size_t  chunkSize;
-    int     nChunks;
-    
-    struct LinkedList* head;
-};
-
-void* poolMalloc(struct Allocator* pAllocator, size_t sz)
-{
-    struct PoolAllocator* pPoolAllocator = (struct PoolAllocator *)pAllocator;
-    assert(sz == pPoolAllocator->chunkSize);
-    void* ptr = pPoolAllocator->head;
-    llist_remove_head(pPoolAllocator->head);
-    return ptr;
-}
-
-void poolFree(struct Allocator* pAllocator, void* ptr)
-{
-    struct PoolAllocator* pPoolAllocator = (struct PoolAllocator *)pAllocator;
-    llist_add(pPoolAllocator->head, (struct LinkedList *)ptr);
-}
 
 /******************* Public API routines  ********************/
-
-/********************** VFS routines  ************************/
 int sakhadb_file_open(const char* pszFilename,
                       int flags,
                       sakhadb_file_t* ppFile)
@@ -399,63 +353,5 @@ int sakhadb_file_size(sakhadb_file_t fd, int64_t* pSize)
 const char* sakhadb_file_filename(sakhadb_file_t fd)
 {
     return ((posixFile *)fd)->pszFilename;
-}
-
-/******************* Allocator routines  *********************/
-sakhadb_allocator_t sakhadb_allocator_get_default()
-{
-    static struct Allocator _default_allocator = { defaultMalloc, defaultFree };
-    return &_default_allocator;
-}
-
-void* sakhadb_allocator_allocate(sakhadb_allocator_t allocator, size_t sz)
-{
-    return allocator->xAllocate(allocator, sz);
-}
-
-void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr)
-{
-    return allocator->xFree(allocator, ptr);
-}
-
-int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocator_t* pAllocator)
-{
-    SLOG_OS_INFO("sakhadb_allocator_create_pool: create pool allocator [chunk:%u][count:%d]", chunkSize, nChunks);
-    assert(chunkSize < 8192 && chunkSize > 128);
-    
-    size_t poolSize = chunkSize * nChunks;
-    struct PoolAllocator* poolAllocator = sakhadb_allocator_allocate(sakhadb_allocator_get_default(), sizeof(struct PoolAllocator) + poolSize);
-    if(!poolAllocator)
-    {
-        SLOG_OS_FATAL("sakhadb_allocator_create_pool: failed to allocate memory.");
-        return SAKHADB_NOMEM;
-    }
-    
-    poolAllocator->xAllocate = poolMalloc;
-    poolAllocator->xFree = poolFree;
-    poolAllocator->pool = (char*)poolAllocator + sizeof(struct PoolAllocator);
-    poolAllocator->poolSize = poolSize;
-    poolAllocator->chunkSize = chunkSize;
-    poolAllocator->nChunks = nChunks;
-    poolAllocator->head = 0;
-    
-    for (int i = nChunks-1; i >= 0; --i)
-    {
-        struct LinkedList* item = (struct LinkedList *)((char*)(poolAllocator->pool) + i*chunkSize);
-        llist_add(poolAllocator->head, item);
-    }
-    
-    *pAllocator = (sakhadb_allocator_t)poolAllocator;
-    return SAKHADB_OK;
-}
-
-int sakhadb_allocator_destroy_pool(sakhadb_allocator_t allocator)
-{
-    assert(allocator == sakhadb_allocator_get_default());
-    
-    SLOG_OS_INFO("sakhadb_allocator_destroy: destroy pool allocator");
-    sakhadb_allocator_free(sakhadb_allocator_get_default(), allocator);
-    
-    return SAKHADB_OK;
 }
 
