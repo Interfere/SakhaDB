@@ -30,7 +30,6 @@
 
 struct sakhadb
 {
-    sakhadb_allocator_t allocator;
     sakhadb_file_t  h;      /* The file handle */
     sakhadb_pager_t pager;  /* The pager */
 };
@@ -47,7 +46,6 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
     }
     memset(db, 0, sizeof(sakhadb));
     
-    db->allocator = default_allocator;
     int rc = sakhadb_file_open(filename, SAKHADB_OPEN_READWRITE | SAKHADB_OPEN_CREATE, &db->h);
     if(rc != SAKHADB_OK)
     {
@@ -88,6 +86,6 @@ int sakhadb_close(sakhadb* db)
         SLOG_WARN("sakhadb_close: failed to close file [%d]", rc);
     }
     
-    sakhadb_allocator_free(db->allocator, db);
+    sakhadb_allocator_free(sakhadb_allocator_get_default(), db);
     return rc;
 }
