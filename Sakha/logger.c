@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #define SAKHADB_LOG_BUF_SIZE    64
 
@@ -78,7 +79,9 @@ static void logMessage(int iLevel, const char* pszFormat, va_list va)
     char pszMsg[SAKHADB_LOG_BUF_SIZE*3];
     int n = vsnprintf(pszMsg, sizeof(pszMsg), pszFormat, va);
     assert(n < sizeof(pszMsg));
-    fprintf(stderr, "[%s] %s\n", getLevelStr(iLevel), pszMsg);
+    struct timeval tm;
+    gettimeofday(&tm, 0);
+    fprintf(stderr, "[%s][%ld.%d] %s\n", getLevelStr(iLevel), tm.tv_sec, tm.tv_usec, pszMsg);
 }
 
 void sakhadb_log(int iLevel, const char* pszFormat, ...)

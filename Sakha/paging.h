@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include "os.h"
+#include "page.h"
 
 /**
  * The default size of a database page.
@@ -67,7 +68,7 @@ int sakhadb_pager_sync(sakhadb_pager_t);
  * If 'readonly' flag had been unset and page did not present in DB file
  * then routine would create new page with ready-to-use content.
  */
-int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData);
+int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sakhadb_page_t* pPage);
 
 
 #endif // _SAKHADB_PAGING_H_

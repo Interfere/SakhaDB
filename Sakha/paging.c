@@ -364,12 +364,12 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
     return SAKHADB_OK;
 }
 
-int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, void** ppData)
+int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sakhadb_page_t* pPage)
 {
     SLOG_PAGING_INFO("sakhadb_pager_request_page: requesting page [%d][%s]", no, readonly?"r":"rw");
     if(no == 1)
     {
-        *ppData = pager->page1->pData;
+        *pPage = (sakhadb_page_t)pager->page1->pData;
         return SAKHADB_OK;
     }
     
@@ -383,11 +383,11 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, voi
     int rc = SAKHADB_OK;
     
     SLOG_PAGING_INFO("sakhadb_pager_request_page: looking for page in table.");
-    struct Page* pPage = lookupPageInTable(pager, no);
+    struct Page* pInternalPage = lookupPageInTable(pager, no);
     if(!pPage)
     {
         SLOG_PAGING_INFO("sakhadb_pager_request_page: page not found. create new.");
-        rc = createPage(pager, no, &pPage);
+        rc = createPage(pager, no, &pInternalPage);
         if(rc != SAKHADB_OK)
         {
             SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to create page [%d]", no);
@@ -395,7 +395,7 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, voi
         }
         
         SLOG_PAGING_INFO("sakhadb_pager_request_page: fetch page content");
-        rc = fetchPageContent(pPage);
+        rc = fetchPageContent(pInternalPage);
         if(rc != SAKHADB_OK)
         {
             SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to fetch page content. [%d]", no);
@@ -405,11 +405,10 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, voi
     
     if(!readonly)
     {
-        markAsDirty(pPage);
+        markAsDirty(pInternalPage);
     }
     
-    *ppData = pPage->pData;
-    return SAKHADB_OK;
+    *pPage = (sakhadb_page_t)pInternalPage->pData;
     
 cleanup:
     return rc;
