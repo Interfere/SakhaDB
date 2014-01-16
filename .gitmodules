@@ -1,3 +1,6 @@
 [submodule "deps/bson"]
 	path = deps/bson
 	url = git@github.com:Interfere/BSON.git
+[submodule "deps/cpl"]
+	path = deps/cpl
+	url = git@github.com:Interfere/CPL.git
