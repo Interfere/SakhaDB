@@ -1,0 +1,3 @@
+[submodule "deps/bson"]
+	path = deps/bson
+	url = git@github.com:Interfere/BSON.git
