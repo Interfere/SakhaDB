@@ -16,6 +16,23 @@
 		6CF34939182BD10E00887952 /* Sakha.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6CF34938182BD10E00887952 /* Sakha.1 */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		6C87359818882A7100E83C91 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6C87359318882A7100E83C91 /* CPL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 71F454FD1875DC5C00FCBA58;
+			remoteInfo = cpl;
+		};
+		6C87359A18882A7100E83C91 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6C87359318882A7100E83C91 /* CPL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 71F4550F1875DCF600FCBA58;
+			remoteInfo = cpl_ios;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		6CF34931182BD10E00887952 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -39,6 +56,7 @@
 		6C3A2C23182D33FF0092E169 /* os.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = os.h; sourceTree = "<group>"; };
 		6C3A2C24182D35E70092E169 /* os_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os_posix.c; sourceTree = "<group>"; };
 		6C3A2C26182D36730092E169 /* sakhadb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sakhadb.h; sourceTree = "<group>"; };
+		6C87359318882A7100E83C91 /* CPL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = CPL.xcodeproj; path = deps/cpl/xcode/CPL.xcodeproj; sourceTree = "<group>"; };
 		6CA099121834BD3D00A42DE9 /* paging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = paging.h; sourceTree = "<group>"; };
 		6CA099131834C0FF00A42DE9 /* paging.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = paging.c; sourceTree = "<group>"; };
 		6CF34933182BD10E00887952 /* Sakha */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Sakha; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -57,9 +75,27 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6C87359218882A6300E83C91 /* Deps */ = {
+			isa = PBXGroup;
+			children = (
+				6C87359318882A7100E83C91 /* CPL.xcodeproj */,
+			);
+			name = Deps;
+			sourceTree = "<group>";
+		};
+		6C87359418882A7100E83C91 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6C87359918882A7100E83C91 /* libcpl.a */,
+				6C87359B18882A7100E83C91 /* libcpl.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		6CF3492A182BD10E00887952 = {
 			isa = PBXGroup;
 			children = (
+				6C87359218882A6300E83C91 /* Deps */,
 				6CF34935182BD10E00887952 /* Sakha */,
 				6CF34934182BD10E00887952 /* Products */,
 			);
@@ -132,12 +168,35 @@
 			mainGroup = 6CF3492A182BD10E00887952;
 			productRefGroup = 6CF34934182BD10E00887952 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 6C87359418882A7100E83C91 /* Products */;
+					ProjectRef = 6C87359318882A7100E83C91 /* CPL.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				6CF34932182BD10E00887952 /* Sakha */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		6C87359918882A7100E83C91 /* libcpl.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libcpl.a;
+			remoteRef = 6C87359818882A7100E83C91 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		6C87359B18882A7100E83C91 /* libcpl.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libcpl.a;
+			remoteRef = 6C87359A18882A7100E83C91 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXSourcesBuildPhase section */
 		6CF3492F182BD10E00887952 /* Sources */ = {
