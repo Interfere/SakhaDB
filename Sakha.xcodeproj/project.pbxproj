@@ -11,27 +11,20 @@
 		6C2CACA818338E6F007ACC65 /* sakhadb.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C2CACA718338E6F007ACC65 /* sakhadb.c */; };
 		6C3A2C21182D2E280092E169 /* logger.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C20182D2E280092E169 /* logger.c */; };
 		6C3A2C25182D35E70092E169 /* os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C24182D35E70092E169 /* os_posix.c */; };
+		6C8735FB188834F100E83C91 /* document.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F0188834F100E83C91 /* document.c */; };
+		6C8735FC188834F100E83C91 /* documentbuilder.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F2188834F100E83C91 /* documentbuilder.c */; };
+		6C8735FD188834F100E83C91 /* element.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F4188834F100E83C91 /* element.c */; };
+		6C8735FE188834F100E83C91 /* iterator.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F6188834F100E83C91 /* iterator.c */; };
+		6C873600188834F100E83C91 /* oid.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F9188834F100E83C91 /* oid.c */; };
+		6C8736061888350000E83C91 /* cpl_array.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8736021888350000E83C91 /* cpl_array.c */; };
+		6C8736071888350000E83C91 /* cpl_atomic_osx.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8736031888350000E83C91 /* cpl_atomic_osx.c */; };
+		6C8736081888350000E83C91 /* cpl_random_osx.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8736041888350000E83C91 /* cpl_random_osx.c */; };
+		6C8736091888350000E83C91 /* cpl_region.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8736051888350000E83C91 /* cpl_region.c */; };
+		6C873615188835F200E83C91 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C873614188835F200E83C91 /* Security.framework */; };
 		6CA099141834C0FF00A42DE9 /* paging.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CA099131834C0FF00A42DE9 /* paging.c */; };
 		6CF34937182BD10E00887952 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CF34936182BD10E00887952 /* main.c */; };
 		6CF34939182BD10E00887952 /* Sakha.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6CF34938182BD10E00887952 /* Sakha.1 */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		6C87359818882A7100E83C91 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6C87359318882A7100E83C91 /* CPL.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 71F454FD1875DC5C00FCBA58;
-			remoteInfo = cpl;
-		};
-		6C87359A18882A7100E83C91 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6C87359318882A7100E83C91 /* CPL.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 71F4550F1875DCF600FCBA58;
-			remoteInfo = cpl_ios;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		6CF34931182BD10E00887952 /* CopyFiles */ = {
@@ -56,7 +49,27 @@
 		6C3A2C23182D33FF0092E169 /* os.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = os.h; sourceTree = "<group>"; };
 		6C3A2C24182D35E70092E169 /* os_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os_posix.c; sourceTree = "<group>"; };
 		6C3A2C26182D36730092E169 /* sakhadb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sakhadb.h; sourceTree = "<group>"; };
-		6C87359318882A7100E83C91 /* CPL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = CPL.xcodeproj; path = deps/cpl/xcode/CPL.xcodeproj; sourceTree = "<group>"; };
+		6C8735EF188834F100E83C91 /* bsontypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bsontypes.h; sourceTree = "<group>"; };
+		6C8735F0188834F100E83C91 /* document.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = document.c; sourceTree = "<group>"; };
+		6C8735F1188834F100E83C91 /* document.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = document.h; sourceTree = "<group>"; };
+		6C8735F2188834F100E83C91 /* documentbuilder.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = documentbuilder.c; sourceTree = "<group>"; };
+		6C8735F3188834F100E83C91 /* documentbuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = documentbuilder.h; sourceTree = "<group>"; };
+		6C8735F4188834F100E83C91 /* element.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = element.c; sourceTree = "<group>"; };
+		6C8735F5188834F100E83C91 /* element.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = element.h; sourceTree = "<group>"; };
+		6C8735F6188834F100E83C91 /* iterator.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = iterator.c; sourceTree = "<group>"; };
+		6C8735F7188834F100E83C91 /* iterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iterator.h; sourceTree = "<group>"; };
+		6C8735F9188834F100E83C91 /* oid.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = oid.c; sourceTree = "<group>"; };
+		6C8735FA188834F100E83C91 /* oid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = oid.h; sourceTree = "<group>"; };
+		6C8736021888350000E83C91 /* cpl_array.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_array.c; sourceTree = "<group>"; };
+		6C8736031888350000E83C91 /* cpl_atomic_osx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_atomic_osx.c; sourceTree = "<group>"; };
+		6C8736041888350000E83C91 /* cpl_random_osx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_random_osx.c; sourceTree = "<group>"; };
+		6C8736051888350000E83C91 /* cpl_region.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_region.c; sourceTree = "<group>"; };
+		6C87360C1888351500E83C91 /* cpl_array.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpl_array.h; path = cpl/cpl_array.h; sourceTree = "<group>"; };
+		6C87360D1888351500E83C91 /* cpl_atomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpl_atomic.h; path = cpl/cpl_atomic.h; sourceTree = "<group>"; };
+		6C87360E1888351500E83C91 /* cpl_error.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpl_error.h; path = cpl/cpl_error.h; sourceTree = "<group>"; };
+		6C87360F1888351500E83C91 /* cpl_random.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpl_random.h; path = cpl/cpl_random.h; sourceTree = "<group>"; };
+		6C8736101888351500E83C91 /* cpl_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpl_region.h; path = cpl/cpl_region.h; sourceTree = "<group>"; };
+		6C873614188835F200E83C91 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		6CA099121834BD3D00A42DE9 /* paging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = paging.h; sourceTree = "<group>"; };
 		6CA099131834C0FF00A42DE9 /* paging.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = paging.c; sourceTree = "<group>"; };
 		6CF34933182BD10E00887952 /* Sakha */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Sakha; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,6 +82,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C873615188835F200E83C91 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,18 +92,88 @@
 		6C87359218882A6300E83C91 /* Deps */ = {
 			isa = PBXGroup;
 			children = (
-				6C87359318882A7100E83C91 /* CPL.xcodeproj */,
+				6C8736011888350000E83C91 /* cpl */,
+				6C8735EE188834F100E83C91 /* bson */,
 			);
 			name = Deps;
 			sourceTree = "<group>";
 		};
-		6C87359418882A7100E83C91 /* Products */ = {
+		6C8735EE188834F100E83C91 /* bson */ = {
 			isa = PBXGroup;
 			children = (
-				6C87359918882A7100E83C91 /* libcpl.a */,
-				6C87359B18882A7100E83C91 /* libcpl.a */,
+				6C8736121888353300E83C91 /* include */,
+				6C8736131888354800E83C91 /* src */,
 			);
-			name = Products;
+			name = bson;
+			path = deps/bson/src;
+			sourceTree = "<group>";
+		};
+		6C8736011888350000E83C91 /* cpl */ = {
+			isa = PBXGroup;
+			children = (
+				6C87360A1888351500E83C91 /* include */,
+				6C8736111888352400E83C91 /* src */,
+			);
+			name = cpl;
+			path = deps/cpl/src;
+			sourceTree = "<group>";
+		};
+		6C87360A1888351500E83C91 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				6C87360C1888351500E83C91 /* cpl_array.h */,
+				6C87360D1888351500E83C91 /* cpl_atomic.h */,
+				6C87360E1888351500E83C91 /* cpl_error.h */,
+				6C87360F1888351500E83C91 /* cpl_random.h */,
+				6C8736101888351500E83C91 /* cpl_region.h */,
+			);
+			name = include;
+			path = deps/cpl/include;
+			sourceTree = SOURCE_ROOT;
+		};
+		6C8736111888352400E83C91 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				6C8736021888350000E83C91 /* cpl_array.c */,
+				6C8736031888350000E83C91 /* cpl_atomic_osx.c */,
+				6C8736041888350000E83C91 /* cpl_random_osx.c */,
+				6C8736051888350000E83C91 /* cpl_region.c */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+		6C8736121888353300E83C91 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				6C8735EF188834F100E83C91 /* bsontypes.h */,
+				6C8735F1188834F100E83C91 /* document.h */,
+				6C8735F3188834F100E83C91 /* documentbuilder.h */,
+				6C8735F5188834F100E83C91 /* element.h */,
+				6C8735F7188834F100E83C91 /* iterator.h */,
+				6C8735FA188834F100E83C91 /* oid.h */,
+			);
+			name = include;
+			path = ../include/bson;
+			sourceTree = "<group>";
+		};
+		6C8736131888354800E83C91 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				6C8735F0188834F100E83C91 /* document.c */,
+				6C8735F2188834F100E83C91 /* documentbuilder.c */,
+				6C8735F4188834F100E83C91 /* element.c */,
+				6C8735F6188834F100E83C91 /* iterator.c */,
+				6C8735F9188834F100E83C91 /* oid.c */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+		6C873616188835F800E83C91 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6C873614188835F200E83C91 /* Security.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		6CF3492A182BD10E00887952 = {
@@ -97,6 +181,7 @@
 			children = (
 				6C87359218882A6300E83C91 /* Deps */,
 				6CF34935182BD10E00887952 /* Sakha */,
+				6C873616188835F800E83C91 /* Frameworks */,
 				6CF34934182BD10E00887952 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -168,12 +253,6 @@
 			mainGroup = 6CF3492A182BD10E00887952;
 			productRefGroup = 6CF34934182BD10E00887952 /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = 6C87359418882A7100E83C91 /* Products */;
-					ProjectRef = 6C87359318882A7100E83C91 /* CPL.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				6CF34932182BD10E00887952 /* Sakha */,
@@ -181,34 +260,26 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXReferenceProxy section */
-		6C87359918882A7100E83C91 /* libcpl.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libcpl.a;
-			remoteRef = 6C87359818882A7100E83C91 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		6C87359B18882A7100E83C91 /* libcpl.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libcpl.a;
-			remoteRef = 6C87359A18882A7100E83C91 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
-
 /* Begin PBXSourcesBuildPhase section */
 		6CF3492F182BD10E00887952 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C8735FC188834F100E83C91 /* documentbuilder.c in Sources */,
+				6C8736071888350000E83C91 /* cpl_atomic_osx.c in Sources */,
 				6C2CACA818338E6F007ACC65 /* sakhadb.c in Sources */,
 				6C0CACED1848AC0200BB8539 /* allocator.c in Sources */,
 				6CF34937182BD10E00887952 /* main.c in Sources */,
+				6C8736061888350000E83C91 /* cpl_array.c in Sources */,
 				6C3A2C25182D35E70092E169 /* os_posix.c in Sources */,
+				6C8736081888350000E83C91 /* cpl_random_osx.c in Sources */,
+				6C8735FD188834F100E83C91 /* element.c in Sources */,
+				6C873600188834F100E83C91 /* oid.c in Sources */,
 				6C3A2C21182D2E280092E169 /* logger.c in Sources */,
+				6C8735FE188834F100E83C91 /* iterator.c in Sources */,
 				6CA099141834C0FF00A42DE9 /* paging.c in Sources */,
+				6C8735FB188834F100E83C91 /* document.c in Sources */,
+				6C8736091888350000E83C91 /* cpl_region.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -246,6 +317,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/deps/cpl/include",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -278,6 +353,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/deps/cpl/include",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				SDKROOT = macosx;
 			};
@@ -286,6 +365,11 @@
 		6CF3493D182BD10E00887952 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/deps/cpl/include",
+					"$(SRCROOT)/deps/bson/include",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -293,6 +377,11 @@
 		6CF3493E182BD10E00887952 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/deps/cpl/include",
+					"$(SRCROOT)/deps/bson/include",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
