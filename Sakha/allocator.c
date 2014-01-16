@@ -112,8 +112,9 @@ int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocat
     assert(chunkSize < 8192 && chunkSize > 128);
     
     size_t poolSize = chunkSize * nChunks;
-    char* poolBuffer = sakhadb_allocator_allocate(sakhadb_allocator_get_default(), sizeof(struct PoolAllocator) + poolSize);
-    if(!poolBuffer)
+    void* poolBuffer;
+    int res = posix_memalign(&poolBuffer, 0x1000, poolSize + sizeof(struct PoolAllocator));
+    if(res)
     {
         SLOG_ALLOCATOR_FATAL("sakhadb_allocator_create_pool: failed to allocate memory.");
         return SAKHADB_NOMEM;
