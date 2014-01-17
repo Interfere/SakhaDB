@@ -28,6 +28,7 @@
 #include "sakhadb.h"
 #include "logger.h"
 #include "allocator.h"
+#include "btree.h"
 
 /**
  * Turn on/off logging for paging routines
@@ -46,33 +47,35 @@
 #   define SLOG_PAGING_FATAL(...)
 #endif // SLOG_PAGING_ENABLE
 
-struct Page
+struct InternalPage
 {
-    struct Pager* pPager;           /* Pager, which this page belongs to */
     Pgno        pageNumber;         /* Number of the page */
-    int         isDirty;            /* Should be synced */
     char*       pData;              /* Data buffer */
-    struct Page *next;              /* Linked list of pages */
-    struct Page *dnext;             /* Dirty next. Useful when page marked as dirty. */
+    
+    /* Private */
+    struct Pager* pPager;           /* Pager, which this page belongs to */
+    int         isDirty;            /* Should be synced */
+    struct InternalPage *next;              /* Linked list of pages */
+    struct InternalPage *dnext;             /* Dirty next. Useful when page marked as dirty. */
 };
 
 struct PagesHashTable
 {
-    struct Page* _ht[1024];         /* Table of pointers */
+    struct InternalPage* _ht[1024];         /* Table of pointers */
 };
 
 struct Pager
 {
     sakhadb_allocator_t allocator;  /* Allocator to use */
     sakhadb_allocator_t contentAllocator; /* Allocator for page content */
-    sakhadb_file_t  fd;             /* File handle */
-    Pgno            dbSize;         /* Number of pages in database */
-    Pgno            fileSize;       /* Size of the file in pages */
-    struct Page     *page1;         /* Pointer to the first page in file. */
-    uint16_t        pageSize;       /* Page size for current database */
+    sakhadb_file_t      fd;             /* File handle */
+    Pgno                dbSize;         /* Number of pages in database */
+    Pgno                fileSize;       /* Size of the file in pages */
+    struct InternalPage *page1;         /* Pointer to the first page in file. */
+    uint16_t            pageSize;       /* Page size for current database */
     
     struct PagesHashTable table;    /* Hash table to store pages */
-    struct Page     *dirty;         /* List of pages to sync */
+    struct InternalPage *dirty;         /* List of pages to sync */
 };
 
 /**
@@ -84,14 +87,16 @@ struct Header
     uint16_t        pageSize;       /* Actual page size for current DB */
     char            reserved1[2];
     uint32_t        dbVersion;      /* Version of Database */
-    char            reserved2[40];  /* Reserved for future */
+    Pgno            freelist;       /* Freelist */
+    char            reserved2[28];  /* Reserved for future */
+    struct BtreePageHeader page1Header;    /* Header of first page */
 };
 
 
 /**
  * Add a page into hash table. No-op if page exists.
  */
-static void addPageToTable(struct Pager* pager, struct Page* page)
+static void addPageToTable(struct Pager* pager, struct InternalPage* page)
 {
     assert(page);
     int hash = page->pageNumber % sizeof(pager->table._ht);
@@ -102,11 +107,11 @@ static void addPageToTable(struct Pager* pager, struct Page* page)
 /**
  * Remove page from hash table. HashTable must contain the page.
  */
-static void removePageFromTable(struct Pager* pager, struct Page* page)
+static void removePageFromTable(struct Pager* pager, struct InternalPage* page)
 {
     assert(page);
     int hash = page->pageNumber % sizeof(pager->table._ht);
-    struct Page* pPage = pager->table._ht[hash];
+    struct InternalPage* pPage = pager->table._ht[hash];
     if(pPage == page)
     {
         pager->table._ht[hash] = pPage->next;
@@ -121,22 +126,25 @@ static void removePageFromTable(struct Pager* pager, struct Page* page)
     }
 }
 
-static void markAsDirty(struct Page* pPage)
+static void markAsDirty(struct InternalPage* pPage)
 {
     SLOG_PAGING_INFO("markAsDirty: mark page as dirty [%lld]", pPage->pageNumber);
-    pPage->isDirty = 1;
-    pPage->dnext = pPage->pPager->dirty;
-    pPage->pPager->dirty = pPage;
+    if(!pPage->isDirty)
+    {
+        pPage->isDirty = 1;
+        pPage->dnext = pPage->pPager->dirty;
+        pPage->pPager->dirty = pPage;
+    }
 }
 
 /**
  * Lookup page into hash table. Returns 0 if page is not present.
  */
-static struct Page* lookupPageInTable(struct Pager* pager, Pgno no)
+static struct InternalPage* lookupPageInTable(struct Pager* pager, Pgno no)
 {
     assert(no > 0);
     int hash = no % sizeof(pager->table._ht);
-    struct Page* pPage = pager->table._ht[hash];
+    struct InternalPage* pPage = pager->table._ht[hash];
     while (pPage && pPage->pageNumber != no) pPage = pPage->next;
     return pPage;
 }
@@ -147,10 +155,10 @@ static struct Page* lookupPageInTable(struct Pager* pager, Pgno no)
 static int createPage(
     struct Pager *pPager,           /* Pager object, that owns the page */
     Pgno pageNumber,                /* Number of the page */
-    struct Page **ppPage
+    struct InternalPage **ppPage
 )
 {
-    struct Page *pPage = (struct Page *)sakhadb_allocator_allocate(pPager->allocator, sizeof(struct Page));
+    struct InternalPage *pPage = (struct InternalPage *)sakhadb_allocator_allocate(pPager->allocator, sizeof(struct InternalPage));
     if(!pPage)
     {
         SLOG_PAGING_FATAL("createPage: failed to allocate memory for Page object.");
@@ -172,7 +180,7 @@ static int createPage(
 /**
  * The Page object destructor.
  */
-static void destroyPage(struct Page *pPage)
+static void destroyPage(struct InternalPage *pPage)
 {
     removePageFromTable(pPage->pPager, pPage);
     sakhadb_allocator_free(pPage->pPager->contentAllocator, pPage->pData);
@@ -182,7 +190,7 @@ static void destroyPage(struct Page *pPage)
 /**
  * Read data from file
  */
-static int fetchPageContent(struct Page *pPage)
+static int fetchPageContent(struct InternalPage *pPage)
 {
     Pgno pageNumber = pPage->pageNumber;
     int32_t pageSize = pPage->pPager->pageSize;
@@ -204,6 +212,10 @@ static int fetchPageContent(struct Page *pPage)
         return SAKHADB_NOMEM;
     }
     
+#ifdef DEBUG
+    memset(pPage->pData, 0xFF, pageSize);
+#endif
+    
     if(pageNumber <= pPage->pPager->fileSize)
     {
         int64_t offset = (int64_t)(pageNumber-1) * pageSize;
@@ -220,7 +232,7 @@ static int acquireHeader(
 )
 {
     /* Page 1 must be loaded before this call */
-    struct Page* page1 = pager->page1;
+    struct InternalPage* page1 = pager->page1;
     assert(page1);
     
     struct Header *header = (struct Header *)page1->pData;
@@ -232,6 +244,7 @@ static int acquireHeader(
         header->pageSize = pager->pageSize;
         header->reserved1[0] = header->reserved1[1] = 0;
         header->dbVersion = SAKHADB_VERSION_NUMBER;
+        header->freelist = 0;
         memset(header->reserved2, 0, sizeof(header->reserved2));
         
         markAsDirty(page1);
@@ -294,7 +307,7 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
     pager->dbSize = pager->fileSize?pager->fileSize:1;
     memset(pager->table._ht, 0, sizeof(pager->table._ht));
     
-    rc = sakhadb_allocator_create_pool(pager->pageSize, 1024, &pager->contentAllocator);
+    rc = sakhadb_allocator_create_pool(pager->pageSize, 1024, 0x1000, &pager->contentAllocator);
     if(rc != SAKHADB_OK)
     {
         SLOG_PAGING_ERROR("sakhadb_pager_create: failed to create pool allocator.");
@@ -369,7 +382,7 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sak
     SLOG_PAGING_INFO("sakhadb_pager_request_page: requesting page [%d][%s]", no, readonly?"r":"rw");
     if(no == 1)
     {
-        *pPage = (sakhadb_page_t)pager->page1->pData;
+        *pPage = (sakhadb_page_t)pager->page1;
         return SAKHADB_OK;
     }
     
@@ -380,14 +393,12 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sak
         return SAKHADB_NOTAVAIL;
     }
     
-    int rc = SAKHADB_OK;
-    
     SLOG_PAGING_INFO("sakhadb_pager_request_page: looking for page in table.");
-    struct Page* pInternalPage = lookupPageInTable(pager, no);
-    if(!pPage)
+    struct InternalPage* pInternalPage = lookupPageInTable(pager, no);
+    if(!pInternalPage)
     {
         SLOG_PAGING_INFO("sakhadb_pager_request_page: page not found. create new.");
-        rc = createPage(pager, no, &pInternalPage);
+        int rc = createPage(pager, no, &pInternalPage);
         if(rc != SAKHADB_OK)
         {
             SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to create page [%d]", no);
@@ -399,7 +410,7 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sak
         if(rc != SAKHADB_OK)
         {
             SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to fetch page content. [%d]", no);
-            goto cleanup;
+            return rc;
         }
     }
     
@@ -408,8 +419,18 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sak
         markAsDirty(pInternalPage);
     }
     
-    *pPage = (sakhadb_page_t)pInternalPage->pData;
+    *pPage = (sakhadb_page_t)pInternalPage;
     
-cleanup:
-    return rc;
+    return SAKHADB_OK;
+}
+
+void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page)
+{
+    SLOG_PAGING_INFO("sakhadb_pager_add_freelist: freeing page [%d]", page->no);
+    Pgno* pNo = (Pgno *)page->data;
+    struct Header* h = (struct Header*)pager->page1;
+    *pNo = h->freelist;
+    h->freelist = page->no;
+    
+    markAsDirty(pager->page1);
 }

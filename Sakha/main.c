@@ -19,6 +19,8 @@
 // THE SOFTWARE.
 
 #include "sakhadb.h"
+#include "os.h"
+#include "paging.h"
 
 int main(int argc, const char * argv[])
 {
@@ -28,6 +30,14 @@ int main(int argc, const char * argv[])
     {
         return 1;
     }
+    
+    sakhadb_pager_t pager = *(sakhadb_pager_t*)((char*)db + sizeof(sakhadb_file_t));
+    sakhadb_page_t page = 0;
+    rc = sakhadb_pager_request_page(pager, 2, 0, &page);
+    
+    sakhadb_pager_add_freelist(pager, page);
+    
+    sakhadb_pager_sync(pager);
     
     rc = sakhadb_close(db);
     if(rc != SAKHADB_OK)

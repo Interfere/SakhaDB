@@ -38,7 +38,7 @@ sakhadb_allocator_t sakhadb_allocator_get_default();
  * Constructor and Destructor for pool allocator. Used as main allocator 
  * for internal storage of page chache module.
  */
-int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocator_t*);
+int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, int align, sakhadb_allocator_t*);
 int sakhadb_allocator_destroy_pool(sakhadb_allocator_t);
 
 /**

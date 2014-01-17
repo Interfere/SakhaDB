@@ -71,7 +71,6 @@
 		6C8736101888351500E83C91 /* cpl_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpl_region.h; path = cpl/cpl_region.h; sourceTree = "<group>"; };
 		6C873614188835F200E83C91 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		6C87361718883D7100E83C91 /* btree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = btree.h; sourceTree = "<group>"; };
-		6C87361818883E5800E83C91 /* page.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = page.h; sourceTree = "<group>"; };
 		6CA099121834BD3D00A42DE9 /* paging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = paging.h; sourceTree = "<group>"; };
 		6CA099131834C0FF00A42DE9 /* paging.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = paging.c; sourceTree = "<group>"; };
 		6CF34933182BD10E00887952 /* Sakha */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Sakha; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -211,7 +210,6 @@
 				6C3A2C24182D35E70092E169 /* os_posix.c */,
 				6C3A2C26182D36730092E169 /* sakhadb.h */,
 				6C2CACA718338E6F007ACC65 /* sakhadb.c */,
-				6C87361818883E5800E83C91 /* page.h */,
 				6CA099121834BD3D00A42DE9 /* paging.h */,
 				6CA099131834C0FF00A42DE9 /* paging.c */,
 			);

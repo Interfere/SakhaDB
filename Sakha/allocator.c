@@ -106,18 +106,25 @@ void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr)
     return allocator->xFree(allocator, ptr);
 }
 
-int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, sakhadb_allocator_t* pAllocator)
+int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, int align, sakhadb_allocator_t* pAllocator)
 {
     SLOG_ALLOCATOR_INFO("sakhadb_allocator_create_pool: create pool allocator [chunk:%u][count:%d]", chunkSize, nChunks);
     assert(chunkSize < 8192 && chunkSize > 128);
     
     size_t poolSize = chunkSize * nChunks;
-    void* poolBuffer;
-    int res = posix_memalign(&poolBuffer, 0x1000, poolSize + sizeof(struct PoolAllocator));
-    if(res)
+    void* poolBuffer = 0;
+    if(align)
     {
-        SLOG_ALLOCATOR_FATAL("sakhadb_allocator_create_pool: failed to allocate memory.");
-        return SAKHADB_NOMEM;
+        int res = posix_memalign(&poolBuffer, align, poolSize + sizeof(struct PoolAllocator));
+        if(res)
+        {
+            SLOG_ALLOCATOR_FATAL("sakhadb_allocator_create_pool: failed to allocate memory.");
+            return SAKHADB_NOMEM;
+        }
+    }
+    else
+    {
+        poolBuffer = malloc(poolSize + sizeof(struct PoolAllocator));
     }
     
     struct PoolAllocator* poolAllocator = (struct PoolAllocator*)(poolBuffer + poolSize);

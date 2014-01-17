@@ -23,7 +23,6 @@
 
 #include <stdint.h>
 #include "os.h"
-#include "page.h"
 
 /**
  * The default size of a database page.
@@ -42,6 +41,12 @@ typedef uint32_t Pgno;
  * Each open file is managed by an instance of the "sakhadb_pager_t" object.
  */
 typedef struct Pager* sakhadb_pager_t;
+typedef struct Page*  sakhadb_page_t;
+struct Page
+{
+    Pgno    no;         /* No of page */
+    void*   data;       /* data itself */
+};
 
 /**
  * Creates pager. Consider this method as constructor.
@@ -69,6 +74,11 @@ int sakhadb_pager_sync(sakhadb_pager_t);
  * then routine would create new page with ready-to-use content.
  */
 int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sakhadb_page_t* pPage);
+
+/**
+ * Marke the page as free and add it to freelist.
+ */
+void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page);
 
 
 #endif // _SAKHADB_PAGING_H_
