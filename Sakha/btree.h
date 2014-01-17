@@ -22,13 +22,19 @@
 #define _SAKHADB_BTREE_H_
 
 #include <stdint.h>
+#include <bson/document.h>
+#include "paging.h"
 
+typedef struct BtreePageHeader* sakhadb_btree_node_t;
 struct BtreePageHeader
 {
     uint16_t        free_sz;    /* Size of free space in the page */
     uint16_t        free_off;   /* Offset to free area */
     uint16_t        slots_off;  /* Offset to slots array */
     uint16_t        nslots;     /* No of slots. */
+    Pgno            next;       /* Left-most leaf */
 };
+
+int sakhadb_btree_find_key(sakhadb_btree_node_t root, void* key, size_t sz);
 
 #endif // _SAKHADB_BTREE_H_

@@ -47,6 +47,8 @@
 #   define SLOG_PAGING_FATAL(...)
 #endif // SLOG_PAGING_ENABLE
 
+#define sakhadb_pager_get_header(p) ((struct Header*)((p)->page1->pData))
+
 struct InternalPage
 {
     Pgno        pageNumber;         /* Number of the page */
@@ -158,6 +160,7 @@ static int createPage(
     struct InternalPage **ppPage
 )
 {
+    // TODO: create separate allocator for struct InternalPage
     struct InternalPage *pPage = (struct InternalPage *)sakhadb_allocator_allocate(pPager->allocator, sizeof(struct InternalPage));
     if(!pPage)
     {
@@ -424,11 +427,28 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sak
     return SAKHADB_OK;
 }
 
+int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage)
+{
+    struct Header* h = sakhadb_pager_get_header(pager);
+    if(h->freelist == 0)
+    {
+        return sakhadb_pager_request_page(pager, pager->dbSize+1, 0, pPage);
+    }
+    
+    int res = sakhadb_pager_request_page(pager, h->freelist, 0, pPage);
+    if(res == SAKHADB_OK)
+    {
+        h->freelist = *(Pgno*)((*pPage)->data);
+        markAsDirty(pager->page1);
+    }
+    return res;
+}
+
 void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page)
 {
     SLOG_PAGING_INFO("sakhadb_pager_add_freelist: freeing page [%d]", page->no);
     Pgno* pNo = (Pgno *)page->data;
-    struct Header* h = (struct Header*)pager->page1;
+    struct Header* h = sakhadb_pager_get_header(pager);
     *pNo = h->freelist;
     h->freelist = page->no;
     

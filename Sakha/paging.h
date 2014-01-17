@@ -76,6 +76,11 @@ int sakhadb_pager_sync(sakhadb_pager_t);
 int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sakhadb_page_t* pPage);
 
 /**
+ * Requests next page available for use.
+ */
+int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage);
+
+/**
  * Marke the page as free and add it to freelist.
  */
 void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page);
