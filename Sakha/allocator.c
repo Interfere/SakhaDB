@@ -109,7 +109,7 @@ void sakhadb_allocator_free(sakhadb_allocator_t allocator, void* ptr)
 int sakhadb_allocator_create_pool(size_t chunkSize, int nChunks, int align, sakhadb_allocator_t* pAllocator)
 {
     SLOG_ALLOCATOR_INFO("sakhadb_allocator_create_pool: create pool allocator [chunk:%u][count:%d]", chunkSize, nChunks);
-    assert(chunkSize < 8192 && chunkSize > 128);
+    assert(chunkSize < 8192 && chunkSize > 32);
     
     size_t poolSize = chunkSize * nChunks;
     void* poolBuffer = 0;
