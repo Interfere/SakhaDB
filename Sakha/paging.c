@@ -27,7 +27,7 @@
 
 #include "sakhadb.h"
 #include "logger.h"
-#include "allocator.h"
+#include <cpl/cpl_allocator.h>
 #include "btree.h"
 
 /**
@@ -68,9 +68,9 @@ struct PagesHashTable
 
 struct Pager
 {
-    sakhadb_allocator_t allocator;      /* Allocator to use */
-    sakhadb_allocator_t pageAllocator;  /* Allocator for page */
-    sakhadb_allocator_t contentAllocator; /* Allocator for page content */
+    cpl_allocator_ref   allocator;      /* Allocator to use */
+    cpl_allocator_ref   pageAllocator;  /* Allocator for page */
+    cpl_allocator_ref   contentAllocator; /* Allocator for page content */
     sakhadb_file_t      fd;             /* File handle */
     Pgno                dbSize;         /* Number of pages in database */
     Pgno                fileSize;       /* Size of the file in pages */
@@ -161,7 +161,7 @@ static int createPage(
     struct InternalPage **ppPage
 )
 {
-    struct InternalPage *pPage = (struct InternalPage *)sakhadb_allocator_allocate(pPager->pageAllocator, sizeof(struct InternalPage));
+    struct InternalPage *pPage = (struct InternalPage *)cpl_allocator_allocate(pPager->pageAllocator, sizeof(struct InternalPage));
     if(!pPage)
     {
         SLOG_PAGING_FATAL("createPage: failed to allocate memory for Page object.");
@@ -186,8 +186,8 @@ static int createPage(
 static void destroyPage(struct InternalPage *pPage)
 {
     removePageFromTable(pPage->pPager, pPage);
-    sakhadb_allocator_free(pPage->pPager->contentAllocator, pPage->pData);
-    sakhadb_allocator_free(pPage->pPager->pageAllocator, pPage);
+    cpl_allocator_free(pPage->pPager->contentAllocator, pPage->pData);
+    cpl_allocator_free(pPage->pPager->pageAllocator, pPage);
 }
 
 /**
@@ -206,7 +206,7 @@ static int fetchPageContent(struct InternalPage *pPage)
     /* Pre-allocate buffer for content */
     if(!pPage->pData)
     {
-        pPage->pData = sakhadb_allocator_allocate(pPage->pPager->contentAllocator, pageSize);
+        pPage->pData = cpl_allocator_allocate(pPage->pPager->contentAllocator, pageSize);
     }
     
     if(!pPage->pData)
@@ -317,8 +317,8 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
                          sakhadb_pager_t* pPager)
 {
     SLOG_PAGING_INFO("sakhadb_pager_create: creating pager.");
-    sakhadb_allocator_t default_allocator = sakhadb_allocator_get_default();
-    struct Pager* pager = (struct Pager*)sakhadb_allocator_allocate(default_allocator, sizeof(struct Pager));
+    cpl_allocator_ref default_allocator = cpl_allocator_get_default();
+    struct Pager* pager = (struct Pager*)cpl_allocator_allocate(default_allocator, sizeof(struct Pager));
     if(!pager)
     {
         SLOG_PAGING_FATAL("sakhadb_pager_create: failed to allocate memory for pager");
@@ -343,17 +343,19 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
     pager->dbSize = pager->fileSize?pager->fileSize:1;
     memset(pager->table._ht, 0, sizeof(pager->table._ht));
     
-    rc = sakhadb_allocator_create_pool(sizeof(struct InternalPage), 1024, 0, &pager->pageAllocator);
-    if(rc != SAKHADB_OK)
+    pager->pageAllocator = cpl_allocator_create_pool(sizeof(struct InternalPage), 1024, 0);
+    if(!pager->pageAllocator)
     {
         SLOG_PAGING_ERROR("sakhadb_pager_create: failed to create pool allocator.");
+        rc = SAKHADB_NOMEM;
         goto page_allocator_failed;
     }
     
-    rc = sakhadb_allocator_create_pool(pager->pageSize, 1024, 0x1000, &pager->contentAllocator);
-    if(rc != SAKHADB_OK)
+    pager->contentAllocator = cpl_allocator_create_pool(pager->pageSize, 1024, 0x1000);
+    if(!pager->pageAllocator)
     {
         SLOG_PAGING_ERROR("sakhadb_pager_create: failed to create pool allocator.");
+        rc = SAKHADB_NOMEM;
         goto content_allocator_failed;
     }
     
@@ -397,13 +399,13 @@ fetch_failed:
     destroyPage(pager->page1);
     
 content_allocator_failed:
-    sakhadb_allocator_destroy_pool(pager->contentAllocator);
+    cpl_allocator_destroy_pool(pager->contentAllocator);
     
 page_allocator_failed:
-    sakhadb_allocator_destroy_pool(pager->pageAllocator);
+    cpl_allocator_destroy_pool(pager->pageAllocator);
     
 cleanup:
-    sakhadb_allocator_free(default_allocator, pager);
+    cpl_allocator_free(default_allocator, pager);
     return rc;
 }
 
@@ -411,7 +413,7 @@ int sakhadb_pager_destroy(sakhadb_pager_t pager)
 {
     SLOG_PAGING_INFO("sakhadb_pager_destroy: destroying pager.");
     destroyPage(pager->page1);
-    sakhadb_allocator_free(pager->allocator, pager);
+    cpl_allocator_free(pager->allocator, pager);
     return SAKHADB_OK;
 }
 

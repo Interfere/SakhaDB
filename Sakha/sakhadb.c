@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "logger.h"
-#include "allocator.h"
+#include <cpl/cpl_allocator.h>
 #include "os.h"
 #include "paging.h"
 
@@ -37,8 +37,8 @@ struct sakhadb
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
 {
     SLOG_INFO("sakhadb_open: opening database [%s]", filename);
-    sakhadb_allocator_t default_allocator = sakhadb_allocator_get_default();
-    sakhadb *db = (sakhadb*)sakhadb_allocator_allocate(default_allocator, sizeof(sakhadb));
+    cpl_allocator_ref default_allocator = cpl_allocator_get_default();
+    sakhadb *db = (sakhadb*)cpl_allocator_allocate(default_allocator, sizeof(sakhadb));
     if(!db)
     {
         SLOG_FATAL("sakhadb_open: failed to allocate memory for struct sakhadb");
@@ -67,7 +67,7 @@ create_pager_failed:
     sakhadb_file_close(db->h);
     
 file_open_failed:
-    sakhadb_allocator_free(default_allocator, db);
+    cpl_allocator_free(default_allocator, db);
     return rc;
 }
 
@@ -86,6 +86,6 @@ int sakhadb_close(sakhadb* db)
         SLOG_WARN("sakhadb_close: failed to close file [%d]", rc);
     }
     
-    sakhadb_allocator_free(sakhadb_allocator_get_default(), db);
+    cpl_allocator_free(cpl_allocator_get_default(), db);
     return rc;
 }

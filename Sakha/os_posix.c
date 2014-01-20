@@ -34,7 +34,7 @@
 #include "logger.h"
 #include "sakhadb.h"
 #include "os.h"
-#include "allocator.h"
+#include <cpl/cpl_allocator.h>
 
 /**
  * Turn on/off logging for file routines
@@ -79,7 +79,7 @@
 typedef struct posixFile posixFile;
 struct posixFile
 {
-    sakhadb_allocator_t allocator;  /* Allocator to use */
+    cpl_allocator_ref allocator;    /* Allocator to use */
     int fd;                         /* The file descriptor */
     char pszFilename[1];            /* The file name */
 };
@@ -156,8 +156,8 @@ static int posixOpen(
         }
     }
     
-    sakhadb_allocator_t default_allocator = sakhadb_allocator_get_default();
-    p = sakhadb_allocator_allocate(default_allocator, sizeof(posixFile) + nPath);
+    cpl_allocator_ref default_allocator = cpl_allocator_get_default();
+    p = cpl_allocator_allocate(default_allocator, sizeof(posixFile) + nPath);
     if(p == 0)
     {
         SLOG_OS_FATAL("posixOpen: Failed to allocate memory");
@@ -190,7 +190,7 @@ static int posixClose(
         robust_close(p->pszFilename, p->fd);
     
     if(p)
-        sakhadb_allocator_free(p->allocator, p);
+        cpl_allocator_free(p->allocator, p);
 
     return SAKHADB_OK;
 }
