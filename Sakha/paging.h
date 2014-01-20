@@ -85,5 +85,15 @@ int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage
  */
 void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page);
 
+/**
+ * Get page size
+ */
+size_t sakhadb_pager_page_size(sakhadb_pager_t pager);
+
+/**
+ * Get size of Header.
+ */
+const size_t sakhadb_pager_header_size();
+
 
 #endif // _SAKHADB_PAGING_H_

@@ -74,6 +74,7 @@ struct Pager
     sakhadb_file_t      fd;             /* File handle */
     Pgno                dbSize;         /* Number of pages in database */
     Pgno                fileSize;       /* Size of the file in pages */
+    struct Header       *dbHeader;      /* Header of the DB file */
     struct InternalPage *page1;         /* Pointer to the first page in file. */
     uint16_t            pageSize;       /* Page size for current database */
     
@@ -91,8 +92,7 @@ struct Header
     char            reserved1[2];
     uint32_t        dbVersion;      /* Version of Database */
     Pgno            freelist;       /* Freelist */
-    char            reserved2[28];  /* Reserved for future */
-    struct BtreePageHeader page1Header;    /* Header of first page */
+    char            reserved2[36];  /* Reserved for future */
 };
 
 
@@ -275,7 +275,7 @@ static int acquireHeader(
     if(pager->dbSize == 1 && pager->fileSize == 0)
     {
         // No page on disk. Create header.
-        memset(header->id, 0, sizeof(header->id));
+        memset(page1->pData, 0, pager->pageSize);
         strncpy(header->id, SAKHADB_FILE_HEADER, sizeof(header->id));
         header->pageSize = pager->pageSize;
         header->reserved1[0] = header->reserved1[1] = 0;
@@ -382,6 +382,8 @@ int sakhadb_pager_create(const sakhadb_file_t fd,
         goto fetch_failed;
     }
     
+    pager->page1->pData += sizeof(struct Header);
+    
     SLOG_PAGING_INFO("sakhadb_pager_create: preload 100 pages");
     rc = preloadPages(pager, 2, 100);
     if(rc != SAKHADB_OK)
@@ -421,8 +423,9 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
 {
     SLOG_PAGING_INFO("sakhadb_pager_sync: syncing pager.");
     while (pager->dirty) {
+        void* pData = (pager->dirty->pageNumber == 1)?(pager->dirty->pData - sizeof(struct Header)):pager->dirty->pData;
         int rc = sakhadb_file_write(pager->fd,
-                                    pager->dirty->pData,
+                                    pData,
                                     pager->pageSize,
                                     (pager->dirty->pageNumber-1) * pager->pageSize);
         pager->dirty->isDirty = 0;
@@ -509,4 +512,14 @@ void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page)
     h->freelist = page->no;
     
     markAsDirty(pager->page1);
+}
+
+size_t sakhadb_pager_page_size(sakhadb_pager_t pager)
+{
+    return pager->pageSize;
+}
+
+const size_t sakhadb_pager_header_size()
+{
+    return sizeof(struct Header);
 }

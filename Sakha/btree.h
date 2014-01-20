@@ -25,16 +25,20 @@
 #include <bson/document.h>
 #include "paging.h"
 
+typedef struct Btree* sakhadb_btree_t;
 typedef struct BtreePageHeader* sakhadb_btree_node_t;
-struct BtreePageHeader
-{
-    uint16_t        free_sz;    /* Size of free space in the page */
-    uint16_t        free_off;   /* Offset to free area */
-    uint16_t        slots_off;  /* Offset to slots array */
-    uint16_t        nslots;     /* No of slots. */
-    Pgno            next;       /* Left-most leaf */
-};
+typedef struct BtreeCursor* sakhadb_btree_cursor_t;
 
-int sakhadb_btree_find_key(sakhadb_btree_node_t root, void* key, size_t sz);
+int sakhadb_btree_create(sakhadb_file_t __restrict h, sakhadb_btree_t* bt);
+int sakhadb_btree_destroy(sakhadb_btree_t);
+
+int sakhadb_btree_get_root(sakhadb_btree_t bt, sakhadb_btree_node_t* root);
+sakhadb_btree_cursor_t sakhadb_btree_find_key(sakhadb_btree_t bt,
+                      sakhadb_btree_node_t root, void* key, size_t sz);
+
+int sakhadb_btree_insert(sakhadb_btree_t bt, sakhadb_btree_node_t root,
+                         void* key, size_t nkey, void* data, size_t ndata);
+
+int sakhadb_btree_commit(sakhadb_btree_t bt);
 
 #endif // _SAKHADB_BTREE_H_

@@ -62,7 +62,7 @@ int sakhadb_close(sakhadb* db);
  * here in order to indicate success or failure.
  */
 #define SAKHADB_OK                  0 /* Successfull result */
-#define SAKHADB_CANTOPEN            1 /* Unable to open the DB file */
+#define SAKHADB_INVALID_ARG         1
 #define SAKHADB_NOMEM               2 /* A malloc() failed */
 #define SAKHADB_IOERR               3 /* Some kind of disk I/O error occured */
 #define SAKHADB_IOERR_READ          4
@@ -73,6 +73,7 @@ int sakhadb_close(sakhadb* db);
 #define SAKHADB_NOTAVAIL            9 /* Requesting page is not available */
 #define SAKHADB_NOTADB             10 /* File is not a valid DB */
 #define SAKHADB_NOTFOUND           11 /* Not found */
+#define SAKHADB_CANTOPEN           12 /* Unable to open the DB file */
 
 
 #endif // _SAKHADB_H_
