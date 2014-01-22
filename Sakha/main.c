@@ -31,27 +31,7 @@ int main(int argc, const char * argv[])
         return 1;
     }
     
-    sakhadb_btree_t btree = *(sakhadb_btree_t*)((char*)db + sizeof(sakhadb_file_t));
-    sakhadb_btree_node_t root;
-    rc = sakhadb_btree_get_root(btree, &root);
-    if(rc != SAKHADB_OK)
-    {
-        return 1;
-    }
-    
-    char colname[] = "animals";
-    sakhadb_btree_cursor_t cursor = sakhadb_btree_find_key(btree, root, colname, sizeof(colname));
-    if(!cursor)
-    {
-        int a = 4;
-        sakhadb_btree_insert(btree, root, colname, sizeof(colname), &a, sizeof(a));
-    }
-    else
-    {
-        
-    }
-    
-    sakhadb_btree_commit(btree);
+    sakhadb_btree_env_t btree = *(sakhadb_btree_t*)((char*)db + sizeof(sakhadb_file_t));
     
     rc = sakhadb_close(db);
     if(rc != SAKHADB_OK)

@@ -30,8 +30,8 @@
 
 struct sakhadb
 {
-    sakhadb_file_t  h;      /* The file handle */
-    sakhadb_btree_t bt;     /* B-tree representation */
+    sakhadb_file_t  h;          /* The file handle */
+    sakhadb_btree_env_t bt;     /* B-tree environment */
 };
 
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
@@ -53,7 +53,7 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
         goto file_open_failed;
     }
     
-    rc = sakhadb_btree_create(db->h, &db->bt);
+    rc = sakhadb_btree_env_create(db->h, &db->bt);
     if(rc != SAKHADB_OK)
     {
         SLOG_FATAL("sakhadb_open: failed to create Btree [code:%d]", rc);
@@ -74,7 +74,7 @@ file_open_failed:
 int sakhadb_close(sakhadb* db)
 {
     SLOG_INFO("sakhadb_close: closing database");
-    int rc = sakhadb_btree_destroy(db->bt);
+    int rc = sakhadb_btree_env_destroy(db->bt);
     if(rc != SAKHADB_OK)
     {
         SLOG_WARN("sakhadb_close: failed to destroy B-tree [%d]", rc);

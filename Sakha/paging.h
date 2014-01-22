@@ -44,8 +44,8 @@ typedef struct Pager* sakhadb_pager_t;
 typedef struct Page*  sakhadb_page_t;
 struct Page
 {
-    Pgno    no;         /* No of page */
-    void*   data;       /* data itself */
+    const Pgno no;         /* No of page */
+    void*      data;       /* data itself */
 };
 
 /**
@@ -66,14 +66,15 @@ int sakhadb_pager_sync(sakhadb_pager_t);
 /**
  * Creates page and reads content from file if available.
  *
- * You can request readonly page by specifying corresponding flag.
- * If 'readonly' flag had been set and page did not present in DB file
- * then routine would return SAKHADB_NOTAVAIL. 
- *
  * If 'readonly' flag had been unset and page did not present in DB file
  * then routine would create new page with ready-to-use content.
  */
-int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sakhadb_page_t* pPage);
+int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, sakhadb_page_t* pPage);
+
+/**
+ * Save page.
+ */
+void sakhadb_pager_save_page(sakhadb_pager_t pager, sakhadb_page_t page);
 
 /**
  * Requests next page available for use.
@@ -88,12 +89,7 @@ void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page);
 /**
  * Get page size
  */
-size_t sakhadb_pager_page_size(sakhadb_pager_t pager);
-
-/**
- * Get size of Header.
- */
-const size_t sakhadb_pager_header_size();
+size_t sakhadb_pager_page_size(sakhadb_pager_t pager, int page1);
 
 
 #endif // _SAKHADB_PAGING_H_

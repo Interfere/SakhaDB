@@ -246,14 +246,14 @@ static int preloadPages(
         rc = createPage(pPager, i + startNo, &pPage);
         if(rc != SAKHADB_OK)
         {
-            SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to create page [%d]", i+startNo);
+            SLOG_PAGING_ERROR("preloadPages: failed to create page [%d]", i+startNo);
             break;
         }
         
         rc = fetchPageContent(pPage);
         if(rc != SAKHADB_OK)
         {
-            SLOG_PAGING_ERROR("sakhadb_pager_request_page: failed to fetch page content. [%d]", i+startNo);
+            SLOG_PAGING_ERROR("preloadPages: failed to fetch page content. [%d]", i+startNo);
             break;
         }
     }
@@ -439,20 +439,13 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
     return SAKHADB_OK;
 }
 
-int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sakhadb_page_t* pPage)
+int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, sakhadb_page_t* pPage)
 {
-    SLOG_PAGING_INFO("sakhadb_pager_request_page: requesting page [%d][%s]", no, readonly?"r":"rw");
+    SLOG_PAGING_INFO("sakhadb_pager_request_page: requesting page [%d]", no);
     if(no == 1)
     {
         *pPage = (sakhadb_page_t)pager->page1;
         return SAKHADB_OK;
-    }
-    
-    int isNew = no > pager->dbSize;
-    if(readonly && isNew)
-    {
-        SLOG_PAGING_WARN("sakhadb_pager_request_page: requested non-existing readonly page.");
-        return SAKHADB_NOTAVAIL;
     }
     
     SLOG_PAGING_INFO("sakhadb_pager_request_page: looking for page in table.");
@@ -476,14 +469,14 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, int readonly, sak
         }
     }
     
-    if(!readonly)
-    {
-        markAsDirty(pInternalPage);
-    }
-    
     *pPage = (sakhadb_page_t)pInternalPage;
     
     return SAKHADB_OK;
+}
+
+void sakhadb_pager_save_page(sakhadb_pager_t pager, sakhadb_page_t page)
+{
+    markAsDirty((struct InternalPage*)page);
 }
 
 int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage)
@@ -491,10 +484,10 @@ int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage
     struct Header* h = sakhadb_pager_get_header(pager);
     if(h->freelist == 0)
     {
-        return sakhadb_pager_request_page(pager, pager->dbSize+1, 0, pPage);
+        return sakhadb_pager_request_page(pager, pager->dbSize+1, pPage);
     }
     
-    int res = sakhadb_pager_request_page(pager, h->freelist, 0, pPage);
+    int res = sakhadb_pager_request_page(pager, h->freelist, pPage);
     if(res == SAKHADB_OK)
     {
         h->freelist = *(Pgno*)((*pPage)->data);
@@ -514,12 +507,7 @@ void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page)
     markAsDirty(pager->page1);
 }
 
-size_t sakhadb_pager_page_size(sakhadb_pager_t pager)
+size_t sakhadb_pager_page_size(sakhadb_pager_t pager, int page1)
 {
-    return pager->pageSize;
-}
-
-const size_t sakhadb_pager_header_size()
-{
-    return sizeof(struct Header);
+    return pager->pageSize - page1?sizeof(struct Header):0;
 }
