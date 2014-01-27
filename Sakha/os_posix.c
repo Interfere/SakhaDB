@@ -39,7 +39,7 @@
 /**
  * Turn on/off logging for file routines
  */
-#define SLOG_OS_ENABLE    1
+//#define SLOG_OS_ENABLE    1
 
 #if SLOG_OS_ENABLE
 #   define SLOG_OS_INFO  SLOG_INFO

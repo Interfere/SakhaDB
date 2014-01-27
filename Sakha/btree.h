@@ -30,8 +30,12 @@ typedef struct BtreeEnv* sakhadb_btree_env_t;
 typedef struct BtreePageHeader* sakhadb_btree_node_t;
 typedef struct BtreeCursor* sakhadb_btree_cursor_t;
 
-int sakhadb_btree_env_create(sakhadb_file_t __restrict h, sakhadb_btree_env_t* bt);
-int sakhadb_btree_env_destroy(sakhadb_btree_env_t bt);
+int sakhadb_btree_env_create(sakhadb_file_t __restrict h, sakhadb_btree_env_t* env);
+int sakhadb_btree_env_destroy(sakhadb_btree_env_t env);
 
+sakhadb_btree_t sakhadb_btree_env_get_meta(sakhadb_btree_env_t env);
+
+sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t t, void* key, size_t nkey);
+void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
 
 #endif // _SAKHADB_BTREE_H_

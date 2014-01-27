@@ -31,7 +31,14 @@ int main(int argc, const char * argv[])
         return 1;
     }
     
-    sakhadb_btree_env_t btree = *(sakhadb_btree_t*)((char*)db + sizeof(sakhadb_file_t));
+    sakhadb_btree_env_t env = *(sakhadb_btree_env_t*)((char*)db + sizeof(sakhadb_file_t));
+
+    sakhadb_btree_t meta = sakhadb_btree_env_get_meta(env);
+    
+    char key[] = "index.title";
+    sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key, sizeof(key));
+    
+    sakhadb_btree_cursor_destroy(cursor);
     
     rc = sakhadb_close(db);
     if(rc != SAKHADB_OK)

@@ -509,5 +509,5 @@ void sakhadb_pager_add_freelist(sakhadb_pager_t pager, sakhadb_page_t page)
 
 size_t sakhadb_pager_page_size(sakhadb_pager_t pager, int page1)
 {
-    return pager->pageSize - page1?sizeof(struct Header):0;
+    return pager->pageSize - page1 * sizeof(struct Header);
 }
