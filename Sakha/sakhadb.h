@@ -33,7 +33,7 @@
  * This is a version of SakhaDB.
  */
 #ifndef SAKHADB_VERSION_NUMBER
-#   define SAKHADB_VERSION_NUMBER 000001
+#   define SAKHADB_VERSION_NUMBER 000002
 #endif
 
 /**

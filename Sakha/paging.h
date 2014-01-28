@@ -77,11 +77,6 @@ int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, sakhadb_page_t* p
 void sakhadb_pager_save_page(sakhadb_pager_t pager, sakhadb_page_t page);
 
 /**
- * Save page if you havle only number.
- */
-void sakhadb_pager_save_page_no(sakhadb_pager_t pager, Pgno no);
-
-/**
  * Requests next page available for use.
  */
 int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage);
