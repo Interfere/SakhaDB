@@ -479,6 +479,13 @@ void sakhadb_pager_save_page(sakhadb_pager_t pager, sakhadb_page_t page)
     markAsDirty((struct InternalPage*)page);
 }
 
+void sakhadb_pager_save_page_no(sakhadb_pager_t pager, Pgno no)
+{
+    sakhadb_page_t page;
+    sakhadb_pager_request_page(pager, no, &page);
+    sakhadb_pager_save_page(pager, page);
+}
+
 int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage)
 {
     struct Header* h = sakhadb_pager_get_header(pager);

@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#include <assert.h>
+
 #include "sakhadb.h"
 #include "os.h"
 #include "btree.h"
@@ -28,6 +30,7 @@ int main(int argc, const char * argv[])
     int rc = sakhadb_open("test.db", 0, &db);
     if(rc != SAKHADB_OK)
     {
+        assert(0);
         return 1;
     }
     
@@ -36,13 +39,23 @@ int main(int argc, const char * argv[])
     sakhadb_btree_t meta = sakhadb_btree_env_get_meta(env);
     
     char key[] = "index.title";
-    sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key, sizeof(key));
+    int a = 15;
+//    rc = sakhadb_btree_insert(meta, key, sizeof(key) - 1, &a, sizeof(a));
+//    if(rc != SAKHADB_OK)
+//    {
+//        assert(0);
+//        return -1;
+//    }
     
+    sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key, sizeof(key) - 1);
     sakhadb_btree_cursor_destroy(cursor);
+    
+//    sakhadb_btree_env_commit(env);
     
     rc = sakhadb_close(db);
     if(rc != SAKHADB_OK)
     {
+        assert(0);
         return 1;
     }
     

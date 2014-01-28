@@ -34,6 +34,9 @@ int sakhadb_btree_env_create(sakhadb_file_t __restrict h, sakhadb_btree_env_t* e
 int sakhadb_btree_env_destroy(sakhadb_btree_env_t env);
 
 sakhadb_btree_t sakhadb_btree_env_get_meta(sakhadb_btree_env_t env);
+int sakhadb_btree_env_commit(sakhadb_btree_env_t env);
+
+int sakhadb_btree_insert(sakhadb_btree_t t, void* key, size_t nkey, void* data, size_t ndata);
 
 sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t t, void* key, size_t nkey);
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
