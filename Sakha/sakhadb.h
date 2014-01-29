@@ -74,6 +74,7 @@ int sakhadb_close(sakhadb* db);
 #define SAKHADB_NOTADB             10 /* File is not a valid DB */
 #define SAKHADB_NOTFOUND           11 /* Not found */
 #define SAKHADB_CANTOPEN           12 /* Unable to open the DB file */
+#define SAKHADB_REPEAT             13 /* Need to repeat operation */
 
 
 #endif // _SAKHADB_H_

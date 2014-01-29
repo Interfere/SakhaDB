@@ -203,7 +203,7 @@ static int btreeAllocateNode(
     header->reserved = 0;
     header->nslots = 0;
     header->free_off = sizeof(struct BtreePageHeader);
-    header->slots_off = sakhadb_pager_page_size(env->pager, page->no);
+    header->slots_off = sakhadb_pager_page_size(env->pager, (page->no == 1));
     header->free_sz = header->slots_off - header->free_off;
     header->right = 0;
     
@@ -232,10 +232,10 @@ static int btreeFindKey(
         if(cmp == 0)
         {
             cmp = key_sz - slots->sz;
-        }
-        if(cmp == 0)
-        {
-            break;
+            if(cmp == 0)
+            {
+                break;
+            }
         }
         if(cmp < 0)
         {
@@ -339,7 +339,7 @@ static inline void btreeInsertNewIndexSlot(sakhadb_btree_node_t node, int islot,
                                            struct BtreeIndexData* data)
 {
     SLOG_BTREE_INFO("btreeInsertNewSlot: insert new slot [i:%d][nkey:%lu][data:%d]", islot, nkey, data->data);
-    assert(node->free_sz >= nkey + 2*sizeof(Pgno) + sizeof(sakhadb_btree_slot_t));
+    assert(node->free_sz >= nkey + sizeof(struct BtreeIndexData) + sizeof(sakhadb_btree_slot_t));
     
     sakhadb_btree_slot_t* slots = btreeGetSlots(node);
     memmove(slots-1, slots, islot * sizeof(sakhadb_btree_slot_t));
@@ -350,10 +350,10 @@ static inline void btreeInsertNewIndexSlot(sakhadb_btree_node_t node, int islot,
     sakhadb_btree_slot_t* new_slot = slots + islot;
     new_slot->off = node->free_off;
     new_slot->sz = nkey;
-    node->free_off += nkey + 2*sizeof(Pgno);
-    node->free_sz -= nkey + 2*sizeof(Pgno);
+    node->free_off += nkey + sizeof(struct BtreeIndexData);
+    node->free_sz -= nkey + sizeof(struct BtreeIndexData) + sizeof(sakhadb_btree_slot_t);
     
-    char* offset = btreeNodeOffset(node, new_slot->off);
+    register char* offset = btreeNodeOffset(node, new_slot->off);
     memcpy(offset, key, nkey);
     
     offset += nkey;
@@ -370,6 +370,8 @@ static inline void btreeInsertNewIndexSlot(sakhadb_btree_node_t node, int islot,
  * 6. Copy ptr to left descendant from middle key to right-most ptr of left descendant
  * 7. Set ptr of middle key to left descendant
  * 8. Set right-most ptr of root to right descendant
+ * 9. Unset leaf flag in root
+ * 10. Save pages
  */
 static inline int btreeSplitRoot(struct BtreePage* root, struct BtreeEnv* env)
 {
@@ -410,27 +412,60 @@ static inline int btreeSplitRoot(struct BtreePage* root, struct BtreeEnv* env)
     if(is_index)
     {
         // p. 3
-        for (uint16_t i = root_node->nslots - 1; i >= middle + 1; i--) {
+        for (int16_t i = root_node->nslots - 1; i >= middle + 1; --i) {
             size_t nkey = root_slots[i].sz;
             char* key = btreeNodeOffset(root_node, root_slots[i].off);
             struct BtreeIndexData* data = (struct BtreeIndexData*)btreeGetDataPtr(root_node, i);
             btreeInsertNewIndexSlot(left_node, 0, key, nkey, data);
         }
-        left_node->nslots = root_node->nslots - middle - 1;
         // p. 3
         
         // p. 4
-        for (uint16_t i = middle-1; i >= 0; i--) {
+        for (int16_t i = middle-1; i >= 0; --i) {
             size_t nkey = root_slots[i].sz;
             char* key = btreeNodeOffset(root_node, root_slots[i].off);
             struct BtreeIndexData* data = (struct BtreeIndexData*)btreeGetDataPtr(root_node, i);
             btreeInsertNewIndexSlot(right_node, 0, key, nkey, data);
         }
-        left_node->nslots = middle;
         // p. 4
+        
+        // p. 5
+        root_node->slots_off += (root_node->nslots - 1) * sizeof(sakhadb_btree_slot_t);
+        root_node->nslots = 1;
+        sakhadb_btree_slot_t* new_root_slots = btreeGetSlots(root_node);
+        *new_root_slots = root_slots[middle];
+        root_slots = new_root_slots;
+        
+        char* from_offset = btreeNodeOffset(root_node, root_slots[0].off);
+        char* to_offset = btreeNodeOffset(root_node, sizeof(struct BtreePageHeader));
+        size_t sz = root_slots[0].sz + sizeof(struct BtreeIndexData);
+        memmove(to_offset, from_offset, sz);
+        root_slots[0].off = sizeof(struct BtreePageHeader);
+        
+        root_node->free_off = sizeof(struct BtreePageHeader) + sz;
+        root_node->free_sz = root_node->slots_off - root_node->free_off;
+        // p. 5
+        
+        // p. 6
+        struct BtreeIndexData* data = (struct BtreeIndexData*)(to_offset + root_slots[0].sz);
+        left_node->right = data->ptr;
+        // p. 6
+        
+        // p. 7
+        data->ptr = left_page->no;
+        // p. 7
+        
+        // p. 8
+        right_node->right = root_node->right;
+        root_node->right = right_page->no;
+        // p. 8
     }
     
+    root_node->flags &= ~SAKHADB_BTREE_LEAF;
     
+    btreeSaveNode(env, left_page);
+    btreeSaveNode(env, right_page);
+    btreeSaveNode(env, root);
     
     return SAKHADB_OK;
 }
@@ -462,7 +497,7 @@ static inline int btreeInsertNonFullIndex(int cmp, int islot,
         case 0:
         case -1:
             // Standard insert
-            btreeInsertNewIndexSlot(node, islot, key, nkey, data);
+            btreeInsertNewIndexSlot(node, islot+1, key, nkey, data);
             break;
             
         case 1:
@@ -497,8 +532,8 @@ static inline int btreeInsertIndex(struct BtreeCursor* cursor,
     }
     
     sakhadb_btree_node_t node = node_page->header;
-    size_t min_entry_size = sizeof(sakhadb_btree_slot_t) + nkey + sizeof(Pgno) + sizeof(int32_t);
-    if(node->free_sz < min_entry_size)
+    size_t entry_size = sizeof(sakhadb_btree_slot_t) + nkey + sizeof(struct BtreeIndexData);
+    if(node->free_sz < entry_size)
     {
         // TODO: split node
         if(is_root)
@@ -524,14 +559,19 @@ static inline int btreeInsertIndex(struct BtreeCursor* cursor,
             return rc;
         }
         
-        
+        return SAKHADB_REPEAT;
     }
     
-    struct BtreeIndexData idata = { 0, no };
+    struct BtreeIndexData idata = { 0, data };
     rc = btreeInsertNonFullIndex(cursor->cmp, cursor->islot, node, key, nkey, &idata);
     btreeSaveNode(env, node_page);
     
     return rc;
+}
+
+static inline void btreeCursorReset(struct BtreeCursor* cursor)
+{
+    cpl_array_clear(&cursor->a);
 }
 
 /***************************** Public Interface *******************************/
@@ -572,7 +612,7 @@ int sakhadb_btree_env_create(sakhadb_file_t __restrict h, sakhadb_btree_env_t* b
         node->slots_off = sakhadb_pager_page_size(env->pager, 1);
         node->free_off = sizeof(struct BtreePageHeader);
         node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
-        node->flags = SAKHADB_BTREE_LEAF;
+        node->flags = SAKHADB_BTREE_LEAF | SAKHADB_BTREE_INDEX;
     }
     
     struct Btree* tree;
@@ -666,17 +706,21 @@ int sakhadb_btree_insert(sakhadb_btree_t t, void* key, int32_t nkey, void* data,
         return 0;
     }
     
-    rc = btreeSearch(t, key, nkey, cursor);
-    switch (rc) {
-        case SAKHADB_OK:
-        case SAKHADB_NOTFOUND:
+    while(1)
+    {
+        rc = btreeSearch(t, key, nkey, cursor);
+        if(rc == SAKHADB_OK || rc == SAKHADB_NOTFOUND)
+        {
             assert(t->root->header->flags & SAKHADB_BTREE_INDEX);
             assert(ndata == sizeof(Pgno));
             rc = btreeInsertIndex(cursor, key, nkey, *(Pgno*)data);
-            break;
-            
-        default:
-            break;
+            if(rc == SAKHADB_REPEAT)
+            {
+                btreeCursorReset(cursor);
+                continue;
+            }
+        }
+        break;
     }
     sakhadb_btree_cursor_destroy(cursor);
     

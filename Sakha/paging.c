@@ -47,7 +47,7 @@
 #   define SLOG_PAGING_FATAL(...)
 #endif // SLOG_PAGING_ENABLE
 
-#define sakhadb_pager_get_header(p) ((struct Header*)((p)->page1->pData))
+#define sakhadb_pager_get_header(p) ((struct Header*)((p)->page1->pData - sizeof(struct Header)))
 
 struct InternalPage
 {
@@ -484,7 +484,7 @@ int sakhadb_pager_request_free_page(sakhadb_pager_t pager, sakhadb_page_t* pPage
     struct Header* h = sakhadb_pager_get_header(pager);
     if(h->freelist == 0)
     {
-        return sakhadb_pager_request_page(pager, pager->dbSize+1, pPage);
+        return sakhadb_pager_request_page(pager, ++pager->dbSize, pPage);
     }
     
     int res = sakhadb_pager_request_page(pager, h->freelist, pPage);
