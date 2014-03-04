@@ -26,19 +26,14 @@
 #include "paging.h"
 
 typedef struct Btree* sakhadb_btree_t;
-typedef struct BtreeEnv* sakhadb_btree_env_t;
+typedef struct BtreeContext* sakhadb_btree_ctx_t;
 typedef struct BtreePageHeader* sakhadb_btree_node_t;
 typedef struct BtreeCursor* sakhadb_btree_cursor_t;
 
-int sakhadb_btree_env_create(sakhadb_file_t __restrict h, sakhadb_btree_env_t* env);
-int sakhadb_btree_env_destroy(sakhadb_btree_env_t env);
+int sakhadb_btree_ctx_create(sakhadb_file_t __restrict h, sakhadb_btree_ctx_t* ctx);
+int sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t env);
 
-sakhadb_btree_t sakhadb_btree_env_get_meta(sakhadb_btree_env_t env);
-int sakhadb_btree_env_commit(sakhadb_btree_env_t env);
-
-int sakhadb_btree_insert(sakhadb_btree_t t, void* key, int32_t nkey, void* data, int32_t ndata);
-
-sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t t, void* key, size_t nkey);
-void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
+sakhadb_btree_t sakhadb_btree_ctx_get_meta(sakhadb_btree_ctx_t env);
+int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t env);
 
 #endif // _SAKHADB_BTREE_H_
