@@ -30,7 +30,6 @@
 #include "logger.h"
 
 #define SAKHADB_BTREE_LEAF      0x1
-#define SAKHADB_BTREE_INDEX     0x2
 
 /**
  * Turn on/off logging for btree routines
@@ -88,6 +87,17 @@ struct Btree
 {
     sakhadb_btree_ctx_t     ctx;        /* Context */
     sakhadb_btree_page_t    root;       /* Root page */
+};
+
+struct BtreeCursor
+{
+    Pgno        no;
+    int         index;
+};
+
+struct BtreeCursorStack
+{
+    cpl_array_t    st;                  /* stack of cursors */
 };
 
 /****************************** B-tree Section ********************************/
@@ -149,11 +159,16 @@ static inline void btreeSaveNode(
     sakhadb_pager_save_page(ctx->pager, (sakhadb_page_t)page);
 }
 
+static inline void* btreeGetDataPtr(struct BtreePageHeader* node, int islot)
+{
+    sakhadb_btree_slot_t* slots = btreeGetSlots(node);
+    return (char*)node + slots[islot].off + slots[islot].sz;
+}
+
 static int btreeFindKey(
-    struct BtreePageHeader* node,
+    sakhadb_btree_node_t node,
     void* key,
-    uint16_t key_sz,
-    int* pIndex
+    uint16_t key_sz
 )
 {
     sakhadb_btree_slot_t* slots = btreeGetSlots(node);
@@ -166,13 +181,9 @@ static int btreeFindKey(
         slot = slots + (lim>>1);
         char* stored_key = (char*)node + slot->off;
         cmp = memcmp(key, stored_key, (slot->sz < key_sz)?slot->sz:key_sz);
-        if(cmp == 0)
+        if(cmp == 0 && (cmp = key_sz - slots->sz))
         {
-            cmp = key_sz - slots->sz;
-            if(cmp == 0)
-            {
-                break;
-            }
+            break;
         }
         if(cmp < 0)
         {
@@ -181,21 +192,48 @@ static int btreeFindKey(
         }
     }
     
-    if(cmp > 0 && slot != base)
+    if(cmp > 0)
     {
-        cmp = -1;
         slot--;
     }
-    
-    *pIndex = (int)(slot - base);
-    return cmp;
+ 
+    return (int)(slot - base);
 }
 
-static inline void* btreeGetDataPtr(struct BtreePageHeader* node, int islot)
+static int btreeFind(
+    sakhadb_btree_t tree,
+    void* key,
+    uint16_t key_sz,
+    struct BtreeCursorStack* stack
+)
 {
-    sakhadb_btree_slot_t* slots = btreeGetSlots(node);
-    return (char*)node + slots[islot].off + slots[islot].sz;
+    register Pgno no = tree->root->no;
+    register sakhadb_btree_node_t node = tree->root->header;
+    while (1) {
+        register int cur = btreeFindKey(node, key, key_sz);
+        struct BtreeCursor cursor = { no, cur };
+        cpl_array_push_back(&stack->st, cursor);
+        if(node->flags)
+        {
+            break;
+        }
+        
+        if(cur == -1)
+        {
+            no = node->right;
+        }
+        else
+        {
+            no = *(Pgno *)btreeGetDataPtr(node, cur);
+        }
+        sakhadb_btree_page_t page;
+        btreeLoadNode(tree->ctx, no, &page);
+        node = page->header;
+    }
+    
+    return SAKHADB_OK;
 }
+
 
 /***************************** Public Interface *******************************/
 int sakhadb_btree_ctx_create(sakhadb_file_t __restrict h, sakhadb_btree_ctx_t* ctx)
@@ -235,7 +273,7 @@ int sakhadb_btree_ctx_create(sakhadb_file_t __restrict h, sakhadb_btree_ctx_t* c
         node->slots_off = sakhadb_pager_page_size(env->pager, 1);
         node->free_off = sizeof(struct BtreePageHeader);
         node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
-        node->flags = SAKHADB_BTREE_LEAF | SAKHADB_BTREE_INDEX;
+        node->flags = SAKHADB_BTREE_LEAF;
     }
     
     struct Btree* tree;
