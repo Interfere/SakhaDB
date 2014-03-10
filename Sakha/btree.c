@@ -135,6 +135,7 @@ static inline void btreeDestroy(struct Btree* tree)
 {
     cpl_allocator_free(cpl_allocator_get_default(), tree);
 }
+
 /******************************************************************************/
 
 
@@ -162,7 +163,7 @@ static inline int btreeLoadNode(
 
 static inline void btreeSaveNode(
     struct BtreeContext * ctx,          /* Context */
-    sakhadb_btree_page_t page         /* Page to save */
+    sakhadb_btree_page_t page           /* Page to save */
 )
 {
     sakhadb_pager_save_page(ctx->pager, (sakhadb_page_t)page);
@@ -268,6 +269,52 @@ static void btreeFind(
 }
 
 /****************************** Split Section *********************************/
+static inline void btreeRemoveLastSlot(
+    sakhadb_btree_node_t __restrict node
+)
+{
+    assert(node->nslots > 0);
+    
+    register sakhadb_btree_slot_t* slot = btreeGetSlots(node);
+    node->nslots -= 1;
+    node->slots_off += sizeof(sakhadb_btree_slot_t);
+    node->free_off = slot->off;
+    node->free_sz += slot->sz + sizeof(sakhadb_btree_slot_t);
+}
+
+static inline void btreeTruncateSlots(
+    sakhadb_btree_node_t __restrict node,
+    size_t k
+)
+{
+    assert(node->nslots >= k);
+    
+    register sakhadb_btree_slot_t* slot = btreeGetSlots(node) + k - 1;
+    node->nslots -= k;
+    node->slots_off += k * sizeof(sakhadb_btree_slot_t);
+    node->free_off = slot->off;
+    node->free_sz += node->slots_off - node->free_off;
+}
+
+static inline sakhadb_btree_slot_t* btreeAppendSlot(
+    sakhadb_btree_node_t __restrict node,
+    sakhadb_btree_slot_t* __restrict slot
+)
+{
+    register sakhadb_btree_slot_t* new_slot = btreeGetSlots(node) - 1;
+    *new_slot = *slot;
+    new_slot->off = node->free_off;
+    memmove(btreeNodeOffset(node, new_slot->off),
+            btreeNodeOffset(node, slot->off),
+            slot->sz);
+    
+    node->nslots += 1;
+    node->free_off += slot->sz;
+    node->slots_off -= sizeof(sakhadb_btree_slot_t);
+    node->free_sz -= new_slot->sz + sizeof(sakhadb_btree_slot_t);
+    return new_slot;
+}
+
 static inline void btreeCopyOnSplit(
     sakhadb_btree_node_t node,
     sakhadb_btree_node_t new_node,
@@ -289,14 +336,14 @@ static inline void btreeCopyOnSplit(
     new_node->slots_off -= k * sizeof(sakhadb_btree_slot_t);
     new_node->free_sz -= len + k * sizeof(sakhadb_btree_slot_t);
     new_node->nslots = k;
-    node->nslots -= k;
-    node->free_off -= len;
-    node->free_sz += len + k * sizeof(sakhadb_btree_slot_t);
+    btreeTruncateSlots(node, k);
 }
 
-static inline int btreeSplitNode(sakhadb_btree_t tree,
-                                 sakhadb_btree_page_t page,
-                                 struct BtreeSplitResult* res)
+static inline int btreeSplitNode(
+    sakhadb_btree_t tree,
+    sakhadb_btree_page_t page,
+    struct BtreeSplitResult* res
+)
 {
     sakhadb_btree_page_t new_page;
     sakhadb_btree_node_t node = page->header;
@@ -307,65 +354,33 @@ static inline int btreeSplitNode(sakhadb_btree_t tree,
     }
     
     sakhadb_btree_node_t new_node = new_page->header;
-    int is_leaf = node->flags == SAKHADB_BTREE_LEAF;
     uint16_t k = node->nslots >> 1;
     
     btreeCopyOnSplit(node, new_node, k);
     new_node->right = node->right;
+    
+    register sakhadb_btree_slot_t* slot = btreeGetSlots(node);
+    res->data = btreeNodeOffset(node, slot->off);
+    res->size = slot->sz;
     res->new_page = new_page;
     
-    if(is_leaf)
+    // If node is leaf
+    if(node->flags == SAKHADB_BTREE_LEAF)
     {
         node->right = new_page->no;
-        
-        sakhadb_btree_slot_t* slot = btreeGetSlots(node);
-        res->data = btreeNodeOffset(node, slot->off);
-        res->size = slot->sz;
     }
     else
     {
-        sakhadb_btree_slot_t* slot = btreeGetSlots(node);
-        
-        // Remove last slot
-        node->nslots -= 1;
-        node->slots_off += sizeof(sakhadb_btree_slot_t);
-        node->free_off = slot->off;
-        node->free_sz += slot->sz + sizeof(sakhadb_btree_slot_t);
-        
+        btreeRemoveLastSlot(node);
         node->right = slot->no;
-        
-        res->data = btreeNodeOffset(node, slot->off);
-        res->size = slot->sz;
     }
     
+    // TODO: consider way to save pages in caller routine
     btreeSaveNode(tree->ctx, page);
     btreeSaveNode(tree->ctx, new_page);
     
 Lexit:
     return rc;
-}
-
-static inline Pgno btreeAssignRootSlot(
-    sakhadb_btree_node_t root_node,
-    sakhadb_btree_slot_t* base_slot,
-    Pgno no
-)
-{
-    sakhadb_btree_slot_t* root_slot = btreeGetSlots(root_node) - 1;
-    
-    *root_slot = *base_slot;
-    root_slot->off = root_node->free_off;
-    memcpy(btreeNodeOffset(root_node, root_slot->off),
-           btreeNodeOffset(root_node, base_slot->off), base_slot->sz);
-    
-    root_node->nslots = 1;
-    root_node->free_off += root_slot->sz;
-    root_node->slots_off -= sizeof(sakhadb_btree_slot_t);
-    root_node->free_sz -= root_slot->sz + sizeof(sakhadb_btree_slot_t);
-    
-    Pgno ret_no = root_slot->no;
-    root_slot->no = no;
-    return ret_no;
 }
 
 static inline int btreeSplitRoot(sakhadb_btree_t tree)
@@ -390,7 +405,7 @@ static inline int btreeSplitRoot(sakhadb_btree_t tree)
     sakhadb_btree_node_t right_node = right_page->header;
     
     uint16_t k = root_node->nslots >> 1;
-    sakhadb_btree_slot_t* base_slot = btreeGetSlots(root_node) + k - 1;
+    sakhadb_btree_slot_t* base_slot = btreeGetSlots(root_node) + k;
     if(is_leaf)
     {
         btreeCopyOnSplit(root_node, right_node, k);
@@ -398,7 +413,7 @@ static inline int btreeSplitRoot(sakhadb_btree_t tree)
         
         assert(root_node->nslots == 0);
         
-        btreeAssignRootSlot(root_node, base_slot, left_page->no);
+        btreeAppendSlot(root_node, base_slot)->no = left_page->no;
         
         left_node->right = right_page->no;
         right_node->right = root_node->right;
@@ -410,15 +425,14 @@ static inline int btreeSplitRoot(sakhadb_btree_t tree)
     else
     {
         btreeCopyOnSplit(root_node, right_node, k);
-        root_node->slots_off += sizeof(sakhadb_btree_slot_t);
-        root_node->nslots--;
-        root_node->free_off -= base_slot->sz;
-        root_node->free_sz -= base_slot->sz + sizeof(sakhadb_btree_slot_t);
+        btreeRemoveLastSlot(root_node);
         btreeCopyOnSplit(root_node, left_node, root_node->nslots);
         
         assert(root_node->nslots == 0);
         
-        left_node->right = btreeAssignRootSlot(root_node, base_slot, left_page->no);
+        register sakhadb_btree_slot_t* new_slot = btreeAppendSlot(root_node, base_slot);
+        left_node->right = new_slot->no;
+        new_slot->no = left_page->no;
         
         right_node->right = root_node->right;
         root_node->right = right_page->no;
