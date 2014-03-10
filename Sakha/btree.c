@@ -461,12 +461,13 @@ static inline void btreeInsertInNode(
     sakhadb_btree_slot_t* slots = btreeGetSlots(node);
     int is_leaf = node->flags;
     
-    sakhadb_btree_slot_t* new_slot;
     uint16_t off;
+    register char* ptr;
+    sakhadb_btree_slot_t* new_slot = slots + idx;
     if(idx == -1)
     {
         off = node->free_off;
-        new_slot = slots - 1;
+        ptr = btreeNodeOffset(node, off);
         if(is_leaf)
         {
             new_slot->no = no;
@@ -480,8 +481,7 @@ static inline void btreeInsertInNode(
     else
     {
         off = slots[idx].off;
-        new_slot = slots + idx;
-        register char* ptr = btreeNodeOffset(node, off);
+        ptr = btreeNodeOffset(node, off);
         memmove(ptr + nkey, ptr, node->free_off - off);
         memmove(slots - 1, slots, (idx + 1) * sizeof(sakhadb_btree_slot_t));
         for(sakhadb_btree_slot_t *s = slots - 1; s != new_slot; ++s)
@@ -500,11 +500,11 @@ static inline void btreeInsertInNode(
             old_slot->no = no;
         }
     }
-    memcpy(btreeNodeOffset(node, off), key, nkey);
+    memcpy(ptr, key, nkey);
     new_slot->off = off;
     new_slot->sz = nkey;
     node->free_off += nkey;
-    node->nslots++;
+    node->nslots += 1;
     node->slots_off -= sizeof(sakhadb_btree_slot_t);
     node->free_sz -= sizeof(sakhadb_btree_slot_t) + nkey;
 }
