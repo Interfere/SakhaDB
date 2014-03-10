@@ -205,7 +205,8 @@ static inline Pgno btreeGetDataPgno(struct BtreePageHeader* node, int islot)
 static int btreeFindKey(
     sakhadb_btree_node_t node,              /* The node contains slots */
     void* key,                              /* Key to find */
-    uint16_t key_sz                         /* Size of the key to find */
+    uint16_t key_sz,                        /* Size of the key to find */
+    int* pIndex                             /* Out: index */
 )
 {
     sakhadb_btree_slot_t* slots = btreeGetSlots(node);
@@ -234,10 +235,11 @@ static int btreeFindKey(
         slot--;
     }
  
-    return (int)(slot - base);
+    *pIndex = (int)(slot - base);
+    return cmp;
 }
 
-static void btreeFind(
+static int btreeFind(
     sakhadb_btree_t tree,                   /* Tree to seek in */
     void* key,                              /* Key to find */
     uint16_t key_sz,                        /* Size of the key to find */
@@ -245,9 +247,11 @@ static void btreeFind(
 )
 {
     sakhadb_btree_page_t page = tree->root;
+    int cmp;
     while (1) {
+        int cur;
         register sakhadb_btree_node_t node = page->header;
-        register int cur = btreeFindKey(node, key, key_sz);
+        cmp = btreeFindKey(node, key, key_sz, &cur);
         struct BtreeCursor cursor = { page, cur };
         cpl_array_push_back(&stack->st, cursor);
         if(node->flags)
@@ -266,6 +270,7 @@ static void btreeFind(
         }
         btreeLoadNode(tree->ctx, no, &page);
     }
+    return cmp;
 }
 
 /****************************** Split Section *********************************/
@@ -375,7 +380,6 @@ static inline int btreeSplitNode(
         node->right = slot->no;
     }
     
-    // TODO: consider way to save pages in caller routine
     btreeSaveNode(tree->ctx, page);
     btreeSaveNode(tree->ctx, new_page);
     
@@ -383,7 +387,11 @@ Lexit:
     return rc;
 }
 
-static inline int btreeSplitRoot(sakhadb_btree_t tree)
+static inline int btreeSplitRoot(
+    sakhadb_btree_t tree,
+    sakhadb_btree_page_t* pLeftPage,
+    sakhadb_btree_page_t* pRightPage
+)
 {
     sakhadb_btree_page_t left_page;
     sakhadb_btree_page_t right_page;
@@ -441,6 +449,9 @@ static inline int btreeSplitRoot(sakhadb_btree_t tree)
     btreeSaveNode(tree->ctx, tree->root);
     btreeSaveNode(tree->ctx, left_page);
     btreeSaveNode(tree->ctx, right_page);
+    
+    *pLeftPage = left_page;
+    *pRightPage = right_page;
     
 Lexit:
     return rc;
@@ -523,35 +534,67 @@ static inline int btreeInsert(
     
     btreeFind(tree, key, nkey, &stack);
     
-    register void* lkey = key;
-    register uint16_t lnkey = nkey;
     register Pgno nno = 0xBADFEED0;
     while (cpl_array_count(&stack.st) > 1)
     {
-        register int was_split = 0;
         struct BtreeCursor* cur = (struct BtreeCursor *)cpl_array_back_p(&stack.st);
         
-        sakhadb_btree_node_t node = cur->page->header;
+        register sakhadb_btree_node_t node = cur->page->header;
         struct BtreeSplitResult res;
         if(node->free_sz < nkey + sizeof(sakhadb_btree_node_t))
         {
             rc = btreeSplitNode(tree, cur->page, &res);
+            
             if(rc) goto Ldexit;
-            was_split = 1;
+            
+            register sakhadb_btree_page_t new_page = res.new_page;
+            if(cur->index < new_page->header->nslots)
+            {
+                cur->page = new_page;
+            }
+            else
+            {
+                cur->index -= new_page->header->nslots;
+            }
+            
+            btreeInsertInNode(cur, key, nkey, nno);
+            
+            key = res.data;
+            nkey = res.size;
+            nno = new_page->no;
         }
-        
-        btreeInsertInNode(cur, lkey, lnkey, nno);
-        cpl_array_pop_back(&stack.st);
-        
-        if(was_split)
+        else
         {
-            lkey = res.data;
-            lnkey = res.size;
-            continue;
+            btreeInsertInNode(cur, key, nkey, nno);
+            btreeSaveNode(tree->ctx, cur->page);
+            cpl_array_resize(&stack.st, 1);
+            goto Ldexit;
         }
-        
-        break;
+        cpl_array_pop_back(&stack.st);
     }
+    
+    struct BtreeCursor* cur = (struct BtreeCursor *)cpl_array_back_p(&stack.st);
+    register sakhadb_btree_node_t node = cur->page->header;
+    if(node->free_sz < nkey + sizeof(sakhadb_btree_node_t))
+    {
+        sakhadb_btree_page_t left_page, right_page;
+        rc = btreeSplitRoot(tree, &left_page, &right_page);
+        
+        if(rc) goto Ldexit;
+        
+        if(cur->index < right_page->header->nslots)
+        {
+            cur->page = right_page;
+        }
+        else
+        {
+            cur->page = left_page;
+            cur->index -= right_page->header->nslots;
+        }
+    }
+    
+    btreeInsertInNode(cur, key, nkey, nno);
+    btreeSaveNode(tree->ctx, cur->page);
     
 Ldexit:
     cpl_array_deinit(&stack.st);
