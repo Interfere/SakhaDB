@@ -120,21 +120,22 @@ int main(int argc, const char * argv[])
         "indx_index_index_index_index_index_index.t69"
     };
     
-//    for (int32_t i = 0; i < sizeof(key)/sizeof(key[0]); ++i)
-//    {
-//        register int32_t len = (int32_t)strlen(key[i]);
-//        rc = sakhadb_btree_insert(meta, key[i], len, &i, sizeof(i));
-//        if(rc != SAKHADB_OK)
-//        {
-//            assert(0);
-//            return -1;
-//        }
-//    }
-//    
-//    sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key, sizeof(key) - 1);
-//    sakhadb_btree_cursor_destroy(cursor);
+    for (int32_t i = 0; i < sizeof(key)/sizeof(key[0]); ++i)
+    {
+        register int32_t len = (int32_t)strlen(key[i]);
+        rc = sakhadb_btree_insert(meta, key[i], len, key[i], len);
+        if(rc != SAKHADB_OK)
+        {
+            assert(0);
+            return -1;
+        }
+    }
     
-//    sakhadb_btree_env_commit(env);
+    register int32_t len = (int32_t)strlen(key[0]);
+    sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key[0], len);
+    sakhadb_btree_cursor_destroy(cursor);
+    
+    sakhadb_btree_ctx_commit(env);
     
     rc = sakhadb_close(db);
     if(rc != SAKHADB_OK)

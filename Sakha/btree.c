@@ -103,8 +103,8 @@ struct BtreeCursorStack
 
 struct BtreeSplitResult
 {
-    void*                   data;
-    size_t                  size;
+    void*                   data;       /* pointer to key data */
+    size_t                  size;       /* size of key */
     sakhadb_btree_page_t    new_page;
 };
 
@@ -255,14 +255,14 @@ static int btreeFindKey(
     sakhadb_btree_slot_t* slots = btreeGetSlots(node);
     sakhadb_btree_slot_t* base = slots;
     register int lim;
-    register int cmp;
-    register sakhadb_btree_slot_t* slot;
+    register int cmp = 1;
+    register sakhadb_btree_slot_t* slot = slots;
     for(lim = node->nslots; lim != 0; lim>>=1)
     {
         slot = slots + (lim>>1);
         char* stored_key = (char*)node + slot->off;
         cmp = memcmp(key, stored_key, (slot->sz < key_sz)?slot->sz:key_sz);
-        if(cmp == 0 && (cmp = key_sz - slots->sz))
+        if(cmp == 0 && (cmp = key_sz - slots->sz) == 0)
         {
             break;
         }
@@ -341,7 +341,7 @@ static inline void btreeTruncateSlots(
     node->nslots -= k;
     node->slots_off += k * sizeof(sakhadb_btree_slot_t);
     node->free_off = slot->off;
-    node->free_sz += node->slots_off - node->free_off;
+    node->free_sz = node->slots_off - node->free_off;
 }
 
 static inline sakhadb_btree_slot_t* btreeAppendSlot(
@@ -360,6 +360,11 @@ static inline sakhadb_btree_slot_t* btreeAppendSlot(
     node->free_off += slot->sz;
     node->slots_off -= sizeof(sakhadb_btree_slot_t);
     node->free_sz -= new_slot->sz + sizeof(sakhadb_btree_slot_t);
+    
+#ifdef DEBUG
+    memset(btreeNodeOffset(node, node->free_off), 0, node->free_sz);
+#endif
+    
     return new_slot;
 }
 
@@ -374,8 +379,9 @@ static inline void btreeCopyOnSplit(
     
     register uint16_t start_off = slots[k-1].off;
     register uint16_t len = slots[0].off + slots[0].sz - start_off;
-    memcpy(slots, new_slots, k * sizeof(sakhadb_btree_slot_t));
+    memcpy(new_slots, slots, k * sizeof(sakhadb_btree_slot_t));
     memcpy(btreeNodeOffset(new_node, new_node->free_off), btreeNodeOffset(node, start_off), len);
+    start_off -= sizeof(struct BtreePageHeader);
     for (uint16_t i = 0; i < k; ++i)
     {
         new_slots[i].off -= start_off;
@@ -423,6 +429,10 @@ static inline int btreeSplitNode(
         node->right = slot->no;
     }
     
+#ifdef DEBUG
+    memset(btreeNodeOffset(node, node->free_off), 0, node->free_sz);
+#endif
+    
     btreeSaveNode(tree->ctx, page);
     btreeSaveNode(tree->ctx, new_page);
     
@@ -463,6 +473,9 @@ static inline int btreeSplitRoot(
         btreeCopyOnSplit(root_node, left_node, root_node->nslots);
         
         assert(root_node->nslots == 0);
+        assert(root_node->free_off == sizeof(struct BtreePageHeader));
+        assert(root_node->slots_off == sakhadb_pager_page_size(tree->ctx->pager, 1));
+        assert(root_node->free_sz == root_node->slots_off - root_node->free_off);
         
         btreeAppendSlot(root_node, base_slot)->no = left_page->no;
         
@@ -480,6 +493,9 @@ static inline int btreeSplitRoot(
         btreeCopyOnSplit(root_node, left_node, root_node->nslots);
         
         assert(root_node->nslots == 0);
+        assert(root_node->free_off == sizeof(struct BtreePageHeader));
+        assert(root_node->slots_off == sakhadb_pager_page_size(tree->ctx->pager, 1));
+        assert(root_node->free_sz == root_node->slots_off - root_node->free_off);
         
         register sakhadb_btree_slot_t* new_slot = btreeAppendSlot(root_node, base_slot);
         left_node->right = new_slot->no;
@@ -499,6 +515,8 @@ static inline int btreeSplitRoot(
 Lexit:
     return rc;
 }
+
+/******************************************************************************/
 
 /***************************** Insert Section *********************************/
 
@@ -569,7 +587,7 @@ static inline int btreeInsert(
     void* data, size_t ndata
 )
 {
-    assert(nkey > sakhadb_pager_page_size(tree->ctx->pager, 0) / 5);
+    assert(nkey < sakhadb_pager_page_size(tree->ctx->pager, 0) / 5);
     int rc = SAKHADB_OK;
     struct BtreeCursorStack stack;
     rc = cpl_array_init(&stack.st, sizeof(struct BtreeCursor), 16);
@@ -579,7 +597,8 @@ static inline int btreeInsert(
     rc = btreeSaveData(tree->ctx, data, ndata, &data_page);
     if(rc) goto Lexit;
     
-    btreeFind(tree, key, nkey, &stack);
+    int cmp = btreeFind(tree, key, nkey, &stack);
+    if(cmp == 0) goto Ldexit;
     
     register Pgno nno = data_page->no;
     while (cpl_array_count(&stack.st) > 1)
@@ -649,6 +668,40 @@ Ldexit:
 Lexit:
     return rc;
 }
+
+/******************************************************************************/
+
+/****************************** Cursor Section ********************************/
+
+static inline int btreeCreateCursor(sakhadb_btree_cursor_t* pCursor)
+{
+    sakhadb_btree_cursor_t cursor = cpl_allocator_allocate(cpl_allocator_get_default(),
+                                                           sizeof(struct BtreeCursorStack));
+    
+    if(!cursor)
+    {
+        return SAKHADB_NOMEM;
+    }
+    
+    int rc = cpl_array_init(&cursor->st, sizeof(struct BtreeCursor), 16);
+    
+    if(rc == SAKHADB_OK)
+    {
+        *pCursor = cursor;
+        return SAKHADB_OK;
+    }
+    
+    cpl_allocator_free(cpl_allocator_get_default(), cursor);
+    return rc;
+}
+
+static inline void btreeDestroyCursor(sakhadb_btree_cursor_t cursor)
+{
+    cpl_array_deinit(&cursor->st);
+    cpl_allocator_free(cpl_allocator_get_default(), cursor);
+}
+
+/******************************************************************************/
 
 /***************************** Public Interface *******************************/
 int sakhadb_btree_ctx_create(sakhadb_file_t __restrict h, sakhadb_btree_ctx_t* ctx)
@@ -739,5 +792,41 @@ int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t ctx)
     SLOG_BTREE_INFO("sakhadb_btree_env_commit: commit changes.");
     
     return sakhadb_pager_sync(ctx->pager);
+}
+
+int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey,
+                         void* data, size_t ndata)
+{
+    assert(tree && key && data && nkey && ndata);
+    return btreeInsert(tree, key, nkey, data, ndata);
+}
+
+sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t tree, void* key, size_t nkey)
+{
+    assert(tree && key && nkey);
+    
+    sakhadb_btree_cursor_t cursor = 0;
+    int rc = btreeCreateCursor(&cursor);
+    if(rc)
+    {
+        return 0;
+    }
+    
+    int cmp = btreeFind(tree, key, nkey, cursor);
+    
+    if(cmp == 0)
+    {
+        return cursor;
+    }
+    
+    btreeDestroyCursor(cursor);
+    
+Lexit:
+    return 0;
+}
+
+void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor)
+{
+    btreeDestroyCursor(cursor);
 }
 
