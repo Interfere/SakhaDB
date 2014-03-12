@@ -110,6 +110,49 @@ struct BtreeSplitResult
 
 /****************************** B-tree Section ********************************/
 
+int btreeSaveData(
+    sakhadb_btree_ctx_t ctx,
+    void* data, size_t ndata,
+    sakhadb_page_t* data_page
+)
+{
+    int rc;
+    char* inData = data;
+    size_t page_size = sakhadb_pager_page_size(ctx->pager, 0);
+    size_t area_size = page_size - sizeof(Pgno);
+    
+    sakhadb_page_t page;
+    rc = sakhadb_pager_request_free_page(ctx->pager, &page);
+    if(rc) goto Lexit;
+    
+    *data_page = page;
+    
+    while (ndata > area_size)
+    {
+        Pgno* pData = page->data;
+        sakhadb_pager_save_page(ctx->pager, page);
+        rc = sakhadb_pager_request_free_page(ctx->pager, &page);
+        if(rc) goto Lexit;
+        
+        *pData++ = page->no;
+        
+        memcpy(pData, inData, area_size);
+        ndata -= area_size;
+        inData += area_size;
+    }
+    
+    memcpy(page->data, inData, ndata);
+    
+    sakhadb_pager_save_page(ctx->pager, page);
+    
+Lexit:
+    return rc;
+}
+
+/******************************************************************************/
+
+/****************************** B-tree Section ********************************/
+
 static inline int btreeCreate(
     sakhadb_btree_ctx_t ctx,            /* Context */
     sakhadb_btree_page_t root,          /* Root page of the tree */
@@ -532,9 +575,13 @@ static inline int btreeInsert(
     rc = cpl_array_init(&stack.st, sizeof(struct BtreeCursor), 16);
     if(rc) goto Lexit;
     
+    sakhadb_page_t data_page;
+    rc = btreeSaveData(tree->ctx, data, ndata, &data_page);
+    if(rc) goto Lexit;
+    
     btreeFind(tree, key, nkey, &stack);
     
-    register Pgno nno = 0xBADFEED0;
+    register Pgno nno = data_page->no;
     while (cpl_array_count(&stack.st) > 1)
     {
         struct BtreeCursor* cur = (struct BtreeCursor *)cpl_array_back_p(&stack.st);
