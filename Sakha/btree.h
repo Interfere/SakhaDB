@@ -42,4 +42,6 @@ int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey,
 sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t tree, void* key, size_t nkey);
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
 
+int sakhadb_btree_cursor_get_data(sakhadb_btree_cursor_t cursor, void** pBuffer);
+
 #endif // _SAKHADB_BTREE_H_
