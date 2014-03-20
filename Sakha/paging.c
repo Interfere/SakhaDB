@@ -33,7 +33,7 @@
 /**
  * Turn on/off logging for paging routines
  */
-#define SLOG_PAGING_ENABLE    1
+//#define SLOG_PAGING_ENABLE    1
 
 #if SLOG_PAGING_ENABLE
 #   define SLOG_PAGING_INFO  SLOG_INFO
