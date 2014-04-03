@@ -22,7 +22,6 @@
 #define _SAKHADB_BTREE_H_
 
 #include <stdint.h>
-#include <bson/document.h>
 #include "paging.h"
 
 typedef struct Btree* sakhadb_btree_t;

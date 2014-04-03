@@ -20,6 +20,8 @@
 
 #include <assert.h>
 
+#include <string.h>
+
 #include "sakhadb.h"
 #include "os.h"
 #include "btree.h"
