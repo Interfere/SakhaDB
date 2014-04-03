@@ -441,6 +441,24 @@ int sakhadb_pager_sync(sakhadb_pager_t pager)
     return SAKHADB_OK;
 }
 
+int sakhadb_pager_update(sakhadb_pager_t pager)
+{
+    SLOG_PAGING_INFO("sakhadb_pager_update: updating pager.");
+    while (pager->dirty)
+    {
+        int rc = fetchPageContent(pager->dirty);
+        pager->dirty->isDirty = 0;
+        if(rc != SAKHADB_OK)
+        {
+            SLOG_PAGING_ERROR("sakhadb_pager_update: failed to update page.");
+            return rc;
+        }
+        pager->dirty = pager->dirty->dnext;
+    }
+    
+    return SAKHADB_OK;
+}
+
 int sakhadb_pager_request_page(sakhadb_pager_t pager, Pgno no, sakhadb_page_t* pPage)
 {
     SLOG_PAGING_INFO("sakhadb_pager_request_page: requesting page [%d]", no);

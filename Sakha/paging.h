@@ -64,6 +64,11 @@ int sakhadb_pager_destroy(sakhadb_pager_t);
 int sakhadb_pager_sync(sakhadb_pager_t);
 
 /**
+ * Re-read corrupted pages from file.
+ */
+int sakhadb_pager_update(sakhadb_pager_t);
+
+/**
  * Creates page and reads content from file if available.
  *
  * If 'readonly' flag had been unset and page did not present in DB file

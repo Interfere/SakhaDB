@@ -74,14 +74,14 @@ struct BtreePageHeader
 typedef struct BtreePage* sakhadb_btree_page_t;
 struct BtreePage
 {
-    Pgno            no;                 /* Page number */
+    Pgno                    no;         /* Page number */
     struct BtreePageHeader* header;     /* Page Header */
 };
 
 struct BtreeContext
 {
-    sakhadb_pager_t     pager;          /* Pager is a low-level interface for per-page access */
-    struct Btree*       metaBtree;      /* Pointer to the Btree that contains DB meta info */
+    sakhadb_pager_t         pager;      /* Pager is a low-level interface for per-page access */
+    struct Btree*           metaBtree;  /* Pointer to the Btree that contains DB meta info */
 };
 
 struct Btree
@@ -98,9 +98,9 @@ struct BtreeCursorPointer
 
 struct BtreeCursorStack
 {
-    sakhadb_btree_t tree;
-    cpl_array_t     st;                 /* stack of cursors */
-    cpl_region_t    buf;                /* buffer for data */
+    sakhadb_btree_t         tree;
+    cpl_array_t             st;         /* stack of cursors */
+    cpl_region_t            buf;        /* buffer for data */
 };
 
 struct BtreeSplitResult
@@ -840,6 +840,15 @@ int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t ctx)
     SLOG_BTREE_INFO("sakhadb_btree_ctx_commit: commit changes.");
     
     return sakhadb_pager_sync(ctx->pager);
+}
+
+int sakhadb_btree_ctx_rollback(sakhadb_btree_ctx_t ctx)
+{
+    assert(ctx);
+    
+    SLOG_BTREE_INFO("sakhadb_btree_ctx_rollback: rollback changes");
+    
+    return sakhadb_pager_update(ctx->pager);
 }
 
 int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey,
