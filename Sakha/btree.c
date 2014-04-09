@@ -100,7 +100,6 @@ struct BtreeCursorStack
 {
     sakhadb_btree_t         tree;
     cpl_array_t             st;         /* stack of cursors */
-    cpl_region_t            buf;        /* buffer for data */
 };
 
 struct BtreeSplitResult
@@ -111,59 +110,6 @@ struct BtreeSplitResult
 };
 
 /****************************** B-tree Section ********************************/
-
-int btreeSaveData(
-    sakhadb_btree_ctx_t ctx,
-    void* data, size_t ndata,
-    sakhadb_page_t* data_page
-)
-{
-    SLOG_BTREE_INFO("btreeSaveData: save data to page [0x%x][len: %d]", ctx, ndata);
-    int rc;
-    Pgno* pData;
-    char* inData = data;
-    size_t area_size = sakhadb_pager_page_size(ctx->pager, 0) - sizeof(Pgno);
-    
-    sakhadb_page_t page;
-    rc = sakhadb_pager_request_free_page(ctx->pager, &page);
-    if(rc)
-    {
-        SLOG_BTREE_ERROR("btreeSaveData: failed to fetch free page [%d]", rc);
-        goto Lexit;
-    }
-    
-    SLOG_BTREE_INFO("btreeSaveData: fetched free page [%d]", page->no);
-    *data_page = page;
-    
-    while (ndata > area_size)
-    {
-        pData = page->data;
-        sakhadb_pager_save_page(ctx->pager, page);
-        rc = sakhadb_pager_request_free_page(ctx->pager, &page);
-        if(rc)
-        {
-            SLOG_BTREE_ERROR("btreeSaveData: failed to fetch free page [%d]", rc);
-            goto Lexit;
-        }
-        
-        SLOG_BTREE_INFO("btreeSaveData: fetched free page [%d]", page->no);
-        
-        *pData++ = page->no;
-        
-        memcpy(pData, inData, area_size);
-        ndata -= area_size;
-        inData += area_size;
-    }
-    
-    pData = page->data;
-    *pData++ = 0;
-    memcpy(pData, inData, ndata);
-    
-    sakhadb_pager_save_page(ctx->pager, page);
-    
-Lexit:
-    return rc;
-}
 
 static inline int btreeCreate(
     sakhadb_btree_ctx_t ctx,            /* Context */
@@ -752,9 +698,8 @@ static inline void btreeDestroyCursor(sakhadb_btree_cursor_t __restrict cursor)
 /******************************************************************************/
 
 /***************************** Public Interface *******************************/
-int sakhadb_btree_ctx_create(sakhadb_file_t __restrict h, sakhadb_btree_ctx_t* ctx)
+int sakhadb_btree_ctx_create(sakhadb_pager_t pager, sakhadb_btree_ctx_t* ctx)
 {
-    assert(h);
     assert(ctx);
     
     SLOG_BTREE_INFO("sakhadb_btree_ctx_create: creating btree representation");
@@ -766,15 +711,10 @@ int sakhadb_btree_ctx_create(sakhadb_file_t __restrict h, sakhadb_btree_ctx_t* c
         return SAKHADB_NOMEM;
     }
     
-    int rc = sakhadb_pager_create(h, &env->pager);
-    if(rc)
-    {
-        SLOG_FATAL("sakhadb_btree_ctx_create: failed to create pager [code:%d]", rc);
-        goto create_pager_failed;
-    }
+    env->pager = pager;
     
     sakhadb_btree_page_t metaRoot;
-    rc = btreeLoadNode(env, 1, &metaRoot);
+    int rc = btreeLoadNode(env, 1, &metaRoot);
     if(rc)
     {
         SLOG_FATAL("sakhadb_btree_ctx_create: failed to load Meta Btree root. [%d]", rc);
@@ -810,20 +750,13 @@ create_pager_failed:
     return rc;
 }
 
-int sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t ctx)
+void sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t ctx)
 {
     assert(ctx);
     
     SLOG_BTREE_INFO("sakhadb_btree_ctx_destroy: destroying btree representation");
     btreeDestroy(ctx->metaBtree);
-    int rc = sakhadb_pager_destroy(ctx->pager);
-    if(rc != SAKHADB_OK)
-    {
-        SLOG_BTREE_WARN("sakhadb_btree_ctx_destroy: failed to destroy pager [%d]", rc);
-    }
-    
     cpl_allocator_free(cpl_allocator_get_default(), ctx);
-    return rc;
 }
 
 sakhadb_btree_t sakhadb_btree_ctx_get_meta(sakhadb_btree_ctx_t ctx)
@@ -851,16 +784,12 @@ int sakhadb_btree_ctx_rollback(sakhadb_btree_ctx_t ctx)
     return sakhadb_pager_update(ctx->pager);
 }
 
-int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey,
-                         void* data, size_t ndata)
+int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey, Pgno no)
 {
-    assert(tree && key && data && nkey && ndata);
-    SLOG_BTREE_INFO("sakhadb_btree_insert: insert new element [%d][%d][%d]", tree->root->no, nkey, ndata);
+    assert(tree && key && nkey && no);
+    SLOG_BTREE_INFO("sakhadb_btree_insert: insert new element [%d][%d][%d]", tree->root->no, nkey, no);
     
-    sakhadb_page_t data_page;
-    int rc = btreeSaveData(tree->ctx, data, ndata, &data_page);
-    if(rc) return rc;
-    return btreeInsert(tree, key, nkey, data_page->no);
+    return btreeInsert(tree, key, nkey, no);
 }
 
 sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t tree, void* key, size_t nkey)
@@ -891,32 +820,12 @@ Lexit:
 
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor)
 {
-    cpl_region_deinit(&cursor->buf);
     btreeDestroyCursor(cursor);
 }
 
-int sakhadb_btree_cursor_get_data(sakhadb_btree_cursor_t cursor, void** pBuffer)
+Pgno sakhadb_btree_cursor_pgno(sakhadb_btree_cursor_t cursor)
 {
-    int rc = SAKHADB_OK;
-    struct BtreeCursorPointer * ptr = (struct BtreeCursorPointer *)cpl_array_back_p(&cursor->st);
-    Pgno no = btreeGetDataPgno(ptr->page->header, ptr->index);
-    size_t page_size = sakhadb_pager_page_size(cursor->tree->ctx->pager, 0);
-    cpl_region_init(&cursor->buf, page_size);
-    
-    do
-    {
-        sakhadb_btree_page_t page;
-        int rc = btreeLoadNode(cursor->tree->ctx, no, &page);
-        if(rc) goto Lexit;
-        Pgno* pNo = (Pgno*)page->header;
-        cpl_region_append_data(&cursor->buf, pNo + 1, page_size - sizeof(Pgno));
-        
-        no = *pNo;
-    } while(no);
-    
-    *pBuffer = cursor->buf.data;
-    
-Lexit:
-    return rc;
+    struct BtreeCursorPointer* ptr = (struct BtreeCursorPointer*)cpl_array_back_p(&cursor->st);
+    return btreeGetDataPgno(ptr->page->header, ptr->index);
 }
 

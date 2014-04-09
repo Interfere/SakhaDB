@@ -17,29 +17,23 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+/**
+ * API for managing data pages in DB file.
+ */
 
-#ifndef _SAKHADB_BTREE_H_
-#define _SAKHADB_BTREE_H_
+#ifndef _SAKHADB_DBDATA_H_
+#define _SAKHADB_DBDATA_H_
 
-#include <stdint.h>
 #include "paging.h"
 
-typedef struct Btree* sakhadb_btree_t;
-typedef struct BtreeContext* sakhadb_btree_ctx_t;
-typedef struct BtreePageHeader* sakhadb_btree_node_t;
-typedef struct BtreeCursorStack* sakhadb_btree_cursor_t;
+#include <cpl/cpl_region.h>
 
-int sakhadb_btree_ctx_create(sakhadb_pager_t pager, sakhadb_btree_ctx_t* ctx);
-void sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t ctx);
+typedef struct DBData* sakhadb_dbdata_t;
 
-sakhadb_btree_t sakhadb_btree_ctx_get_meta(sakhadb_btree_ctx_t env);
-int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t ctx);
-int sakhadb_btree_ctx_rollback(sakhadb_btree_ctx_t ctx);
+int sakhadb_dbdata_create(sakhadb_pager_t pager, sakhadb_dbdata_t* data);
+void sakhadb_dbdata_destroy(sakhadb_dbdata_t);
 
-int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey, Pgno no);
-sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t tree, void* key, size_t nkey);
-void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
+int sakhadb_dbdata_write(sakhadb_dbdata_t dbdata, void* data, size_t ndata, Pgno* pNo);
+int sakhadb_dbdata_read(sakhadb_dbdata_t dbdata, Pgno no, cpl_region_ref reg);
 
-Pgno sakhadb_btree_cursor_pgno(sakhadb_btree_cursor_t cursor);
-
-#endif // _SAKHADB_BTREE_H_
+#endif // _SAKHADB_DBDATA_H_

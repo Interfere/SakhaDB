@@ -27,11 +27,14 @@
 #include <cpl/cpl_allocator.h>
 #include "os.h"
 #include "btree.h"
+#include "dbdata.h"
 
 struct sakhadb
 {
-    sakhadb_file_t  h;          /* The file handle */
-    sakhadb_btree_ctx_t ctx;     /* B-tree environment */
+    sakhadb_file_t      h;          /* The file handle */
+    sakhadb_pager_t     pager;      /* Pager */
+    sakhadb_btree_ctx_t ctx;        /* B-tree environment */
+    sakhadb_dbdata_t    dbdata;     /* DbData */
 };
 
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
@@ -53,17 +56,37 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
         goto file_open_failed;
     }
     
-    rc = sakhadb_btree_ctx_create(db->h, &db->ctx);
+    rc = sakhadb_pager_create(db->h, &db->pager);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_FATAL("sakhadb_open: failed to create pager [code:%d]", rc);
+        goto create_pager_failed;
+    }
+    
+    rc = sakhadb_btree_ctx_create(db->pager, &db->ctx);
     if(rc != SAKHADB_OK)
     {
         SLOG_FATAL("sakhadb_open: failed to create Btree [code:%d]", rc);
         goto create_btree_failed;
     }
     
+    rc = sakhadb_dbdata_create(db->pager, &db->dbdata);
+    if(rc != SAKHADB_OK)
+    {
+        SLOG_FATAL("sakhadb_open: failed to create DbData [code:%d]", rc);
+        goto create_dbdata_failed;
+    }
+    
     *ppDb = db;
     return rc;
     
+create_dbdata_failed:
+    sakhadb_btree_ctx_destroy(db->ctx);
+    
 create_btree_failed:
+    sakhadb_pager_destroy(db->pager);
+    
+create_pager_failed:
     sakhadb_file_close(db->h);
     
 file_open_failed:
@@ -74,10 +97,14 @@ file_open_failed:
 int sakhadb_close(sakhadb* db)
 {
     SLOG_INFO("sakhadb_close: closing database");
-    int rc = sakhadb_btree_ctx_destroy(db->ctx);
+    
+    sakhadb_dbdata_destroy(db->dbdata);
+    sakhadb_btree_ctx_destroy(db->ctx);
+    
+    int rc = sakhadb_pager_destroy(db->pager);
     if(rc != SAKHADB_OK)
     {
-        SLOG_WARN("sakhadb_close: failed to destroy B-tree [%d]", rc);
+        SLOG_WARN("sakhadb_close: failed to destroy pager [%d]", rc);
     }
     
     rc = sakhadb_file_close(db->h);

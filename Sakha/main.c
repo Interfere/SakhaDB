@@ -25,6 +25,7 @@
 #include "sakhadb.h"
 #include "os.h"
 #include "btree.h"
+#include "dbdata.h"
 
 int main(int argc, const char * argv[])
 {
@@ -36,7 +37,8 @@ int main(int argc, const char * argv[])
         return 1;
     }
     
-    sakhadb_btree_ctx_t env = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t));
+    sakhadb_btree_ctx_t env = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
+    sakhadb_dbdata_t dbdata = *(sakhadb_dbdata_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t) + sizeof(sakhadb_btree_ctx_t));
 
     sakhadb_btree_t meta = sakhadb_btree_ctx_get_meta(env);
     
@@ -125,7 +127,14 @@ int main(int argc, const char * argv[])
     for (int32_t i = 0; i < sizeof(key)/sizeof(key[0]); ++i)
     {
         register int32_t len = (int32_t)strlen(key[i]);
-        rc = sakhadb_btree_insert(meta, key[i], len, key[i], len);
+        Pgno no;
+        rc = sakhadb_dbdata_write(dbdata, key, len, &no);
+        if(rc != SAKHADB_OK)
+        {
+            assert(0);
+            return -1;
+        }
+        rc = sakhadb_btree_insert(meta, key[i], len, no);
         if(rc != SAKHADB_OK)
         {
             assert(0);
@@ -138,12 +147,16 @@ int main(int argc, const char * argv[])
     int idx = 25;
     register int32_t len = (int32_t)strlen(key[idx]);
     sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key[idx], len);
-    
-    void* data;
-    sakhadb_btree_cursor_get_data(cursor, &data);
-    
+    Pgno no = sakhadb_btree_cursor_pgno(cursor);
     sakhadb_btree_cursor_destroy(cursor);
     
+    cpl_region_t reg;
+    cpl_region_init(&reg, 0);
+    sakhadb_dbdata_read(dbdata, no, &reg);
+    
+    void* d = reg.data;
+    
+    cpl_region_deinit(&reg);
     
     rc = sakhadb_close(db);
     if(rc != SAKHADB_OK)

@@ -26,6 +26,7 @@
 		6CA099141834C0FF00A42DE9 /* paging.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CA099131834C0FF00A42DE9 /* paging.c */; };
 		6CF34937182BD10E00887952 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CF34936182BD10E00887952 /* main.c */; };
 		6CF34939182BD10E00887952 /* Sakha.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6CF34938182BD10E00887952 /* Sakha.1 */; };
+		760F202B18F55B5000AC36D2 /* dbdata.c in Sources */ = {isa = PBXBuildFile; fileRef = 760F202A18F55B5000AC36D2 /* dbdata.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -80,6 +81,8 @@
 		6CF34933182BD10E00887952 /* Sakha */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Sakha; sourceTree = BUILT_PRODUCTS_DIR; };
 		6CF34936182BD10E00887952 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		6CF34938182BD10E00887952 /* Sakha.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Sakha.1; sourceTree = "<group>"; };
+		760F202A18F55B5000AC36D2 /* dbdata.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dbdata.c; sourceTree = "<group>"; };
+		760F202C18F55B7900AC36D2 /* dbdata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dbdata.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,6 +212,8 @@
 				6CF34938182BD10E00887952 /* Sakha.1 */,
 				6C87361718883D7100E83C91 /* btree.h */,
 				6C36D3A91889755B004C9B87 /* btree.c */,
+				760F202C18F55B7900AC36D2 /* dbdata.h */,
+				760F202A18F55B5000AC36D2 /* dbdata.c */,
 				6C3A2C22182D2E340092E169 /* logger.h */,
 				6C3A2C20182D2E280092E169 /* logger.c */,
 				6CF34936182BD10E00887952 /* main.c */,
@@ -282,6 +287,7 @@
 				6C8736081888350000E83C91 /* cpl_random_osx.c in Sources */,
 				6C8735FD188834F100E83C91 /* element.c in Sources */,
 				6C873600188834F100E83C91 /* oid.c in Sources */,
+				760F202B18F55B5000AC36D2 /* dbdata.c in Sources */,
 				6C36D3AA1889755B004C9B87 /* btree.c in Sources */,
 				6C39758D188D2F6D00B20127 /* cpl_list.c in Sources */,
 				6C3A2C21182D2E280092E169 /* logger.c in Sources */,
