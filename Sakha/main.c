@@ -40,7 +40,8 @@ int main(int argc, const char * argv[])
     sakhadb_btree_ctx_t env = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
     sakhadb_dbdata_t dbdata = *(sakhadb_dbdata_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t) + sizeof(sakhadb_btree_ctx_t));
 
-    sakhadb_btree_t meta = sakhadb_btree_ctx_get_meta(env);
+    sakhadb_btree_t meta;
+    sakhadb_btree_create(env, 1, &meta);
     
     char* key[] = {
         "indx_index_index_index_index_index_index.t1",

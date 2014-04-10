@@ -81,7 +81,6 @@ struct BtreePage
 struct BtreeContext
 {
     sakhadb_pager_t         pager;      /* Pager is a low-level interface for per-page access */
-    struct Btree*           metaBtree;  /* Pointer to the Btree that contains DB meta info */
 };
 
 struct Btree
@@ -713,41 +712,8 @@ int sakhadb_btree_ctx_create(sakhadb_pager_t pager, sakhadb_btree_ctx_t* ctx)
     
     env->pager = pager;
     
-    sakhadb_btree_page_t metaRoot;
-    int rc = btreeLoadNode(env, 1, &metaRoot);
-    if(rc)
-    {
-        SLOG_FATAL("sakhadb_btree_ctx_create: failed to load Meta Btree root. [%d]", rc);
-        goto create_pager_failed;
-    }
-    
-    sakhadb_btree_node_t node = metaRoot->header;
-    
-    if(!node->free_sz)
-    {
-        node->nslots = 0;
-        node->slots_off = sakhadb_pager_page_size(env->pager, 1);
-        node->free_off = sizeof(struct BtreePageHeader);
-        node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
-        node->flags = SAKHADB_BTREE_LEAF;
-    }
-    
-    struct Btree* tree;
-    rc = btreeCreate(env, metaRoot, &tree);
-    if(rc)
-    {
-        SLOG_FATAL("sakhadb_btree_ctx_create: failed to create meta B-tree. [%d]", rc);
-        goto create_pager_failed;
-    }
-    
-    env->metaBtree = tree;
-    
     *ctx = env;
     return SAKHADB_OK;
-    
-create_pager_failed:
-    cpl_allocator_free(default_allocator, env);
-    return rc;
 }
 
 void sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t ctx)
@@ -755,15 +721,47 @@ void sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t ctx)
     assert(ctx);
     
     SLOG_BTREE_INFO("sakhadb_btree_ctx_destroy: destroying btree representation");
-    btreeDestroy(ctx->metaBtree);
     cpl_allocator_free(cpl_allocator_get_default(), ctx);
 }
 
-sakhadb_btree_t sakhadb_btree_ctx_get_meta(sakhadb_btree_ctx_t ctx)
+int sakhadb_btree_create(sakhadb_btree_ctx_t ctx, Pgno no, sakhadb_btree_t* tree)
 {
     assert(ctx);
     
-    return ctx->metaBtree;
+    sakhadb_btree_page_t root;
+    int rc = btreeLoadNode(ctx, no, &root);
+    if(rc)
+    {
+        SLOG_FATAL("sakhadb_btree_create: failed to load Btree root. [%d]", rc);
+        goto Lexit;
+    }
+    
+//    sakhadb_btree_node_t node = root->header;
+    
+//    if(!node->free_sz)
+//    {
+//        node->nslots = 0;
+//        node->slots_off = sakhadb_pager_page_size(env->pager, 1);
+//        node->free_off = sizeof(struct BtreePageHeader);
+//        node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
+//        node->flags = SAKHADB_BTREE_LEAF;
+//    }
+    
+    struct Btree* pTree;
+    rc = btreeCreate(ctx, root, &pTree);
+    if(rc)
+    {
+        SLOG_FATAL("sakhadb_btree_create: failed to create B-tree. [%d]", rc);
+    }
+    
+Lexit:
+    return rc;
+}
+
+void sakhadb_btree_destroy(sakhadb_btree_t tree)
+{
+    assert(tree);
+    btreeDestroy(tree);
 }
 
 int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t ctx)
