@@ -210,7 +210,7 @@ static inline Pgno btreeGetDataPgno(struct BtreePageHeader* node, int islot)
 
 static int btreeFindKey(
     sakhadb_btree_node_t node,              /* The node contains slots */
-    void* key,                              /* Key to find */
+    const void* key,                        /* Key to find */
     uint16_t key_sz,                        /* Size of the key to find */
     int* pIndex                             /* Out: index */
 )
@@ -248,7 +248,7 @@ static int btreeFindKey(
 
 static int btreeFind(
     sakhadb_btree_t tree,                   /* Tree to seek in */
-    void* key,                              /* Key to find */
+    const void* key,                        /* Key to find */
     uint16_t key_sz,                        /* Size of the key to find */
     struct BtreeCursorStack* stack          /* Out param: stack that contains cursors */
 )
@@ -495,7 +495,7 @@ Lexit:
 
 static inline void btreeInsertInNode(
     struct BtreeCursorPointer * cursor,
-    void* key, uint16_t nkey,
+    const void* key, uint16_t nkey,
     Pgno no
 )
 {
@@ -558,7 +558,7 @@ static inline void btreeInsertInNode(
 
 static inline int btreeInsert(
     sakhadb_btree_t tree,
-    void* key, uint16_t nkey,
+    const void* key, uint16_t nkey,
     Pgno no
 )
 {
@@ -736,19 +736,18 @@ int sakhadb_btree_create(sakhadb_btree_ctx_t ctx, Pgno no, sakhadb_btree_t* tree
         goto Lexit;
     }
     
-//    sakhadb_btree_node_t node = root->header;
+    sakhadb_btree_node_t node = root->header;
     
-//    if(!node->free_sz)
-//    {
-//        node->nslots = 0;
-//        node->slots_off = sakhadb_pager_page_size(env->pager, 1);
-//        node->free_off = sizeof(struct BtreePageHeader);
-//        node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
-//        node->flags = SAKHADB_BTREE_LEAF;
-//    }
+    if(node->slots_off == 0)
+    {
+        node->nslots = 0;
+        node->slots_off = sakhadb_pager_page_size(ctx->pager, 1);
+        node->free_off = sizeof(struct BtreePageHeader);
+        node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
+        node->flags = SAKHADB_BTREE_LEAF;
+    }
     
-    struct Btree* pTree;
-    rc = btreeCreate(ctx, root, &pTree);
+    rc = btreeCreate(ctx, root, tree);
     if(rc)
     {
         SLOG_FATAL("sakhadb_btree_create: failed to create B-tree. [%d]", rc);
@@ -782,7 +781,7 @@ int sakhadb_btree_ctx_rollback(sakhadb_btree_ctx_t ctx)
     return sakhadb_pager_update(ctx->pager);
 }
 
-int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey, Pgno no)
+int sakhadb_btree_insert(sakhadb_btree_t tree, const void* key, size_t nkey, Pgno no)
 {
     assert(tree && key && nkey && no);
     SLOG_BTREE_INFO("sakhadb_btree_insert: insert new element [%d][%d][%d]", tree->root->no, nkey, no);
@@ -790,30 +789,20 @@ int sakhadb_btree_insert(sakhadb_btree_t tree, void* key, size_t nkey, Pgno no)
     return btreeInsert(tree, key, nkey, no);
 }
 
-sakhadb_btree_cursor_t sakhadb_btree_find(sakhadb_btree_t tree, void* key, size_t nkey)
+int sakhadb_btree_find(sakhadb_btree_t tree, const void* key, size_t nkey, sakhadb_btree_cursor_t cursor)
 {
     assert(tree && key && nkey);
     SLOG_BTREE_INFO("sakhadb_btree_find: find key in tree [%d][%d]", tree->root->no, nkey);
     
-    sakhadb_btree_cursor_t cursor = 0;
-    int rc = btreeCreateCursor(&cursor);
-    if(rc)
-    {
-        return 0;
-    }
-    
     int cmp = btreeFind(tree, key, nkey, cursor);
+    cursor->tree = tree;
     
-    if(cmp == 0)
-    {
-        cursor->tree = tree;
-        return cursor;
-    }
-    
-    btreeDestroyCursor(cursor);
-    
-Lexit:
-    return 0;
+    return cmp;
+}
+
+int sakhadb_btree_cursor_create(sakhadb_btree_cursor_t* cursor)
+{
+    return btreeCreateCursor(cursor);
 }
 
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor)

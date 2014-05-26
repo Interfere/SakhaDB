@@ -22,12 +22,71 @@
 
 #include <string.h>
 
+#include <cpl/cpl_allocator.h>
+
 #include "sakhadb.h"
 #include "os.h"
 #include "btree.h"
 #include "dbdata.h"
 
-int main(int argc, const char * argv[])
+typedef sakhadb_btree_t sakhadb_collection_t;
+
+int sakhadb_collection_create(sakhadb* db, const char* name, size_t length, sakhadb_collection_t* coll)
+{
+    int rc = SAKHADB_OK;
+    sakhadb_btree_cursor_t cursor = 0;
+    sakhadb_pager_t pager = *(sakhadb_pager_t*)((char*)db + sizeof(sakhadb_file_t));
+    sakhadb_btree_ctx_t ctx = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
+    
+    sakhadb_btree_t meta = 0;
+    sakhadb_btree_create(ctx, 1, &meta);
+    
+    rc = sakhadb_btree_cursor_create(&cursor);
+    if(rc)
+    {
+        goto Lexit;
+    }
+    
+    int cmp = sakhadb_btree_find(meta, name, length, cursor);
+    Pgno no;
+    if(cmp != 0) // Add new collection to Database
+    {
+        sakhadb_page_t page;
+        rc = sakhadb_pager_request_free_page(pager, &page);
+        if(rc)
+        {
+            goto L1;
+        }
+        
+        rc = sakhadb_btree_insert(meta, name, length, page->no);
+        if(rc)
+        {
+            goto L1;
+        }
+        
+        no = page->no;
+    }
+    else
+    {
+        no = sakhadb_btree_cursor_pgno(cursor);
+    }
+    
+    rc = sakhadb_btree_create(ctx, no, coll);
+    
+L1:
+    sakhadb_btree_cursor_destroy(cursor);
+    
+Lexit:
+    sakhadb_btree_destroy(meta);
+    return rc;
+}
+
+void sakhadb_collection_destroy(sakhadb_collection_t collection)
+{
+    sakhadb_btree_destroy(collection);
+}
+
+int test_db()
 {
     sakhadb* db = 0;
     int rc = sakhadb_open("test.db", 0, &db);
@@ -39,7 +98,7 @@ int main(int argc, const char * argv[])
     
     sakhadb_btree_ctx_t env = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
     sakhadb_dbdata_t dbdata = *(sakhadb_dbdata_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t) + sizeof(sakhadb_btree_ctx_t));
-
+    
     sakhadb_btree_t meta;
     sakhadb_btree_create(env, 1, &meta);
     
@@ -147,7 +206,9 @@ int main(int argc, const char * argv[])
     
     int idx = 25;
     register int32_t len = (int32_t)strlen(key[idx]);
-    sakhadb_btree_cursor_t cursor = sakhadb_btree_find(meta, key[idx], len);
+    sakhadb_btree_cursor_t cursor = 0;
+    int cmp = 0;
+    cmp = sakhadb_btree_find(meta, key[idx], len, cursor);
     Pgno no = sakhadb_btree_cursor_pgno(cursor);
     sakhadb_btree_cursor_destroy(cursor);
     
@@ -167,5 +228,45 @@ int main(int argc, const char * argv[])
     }
     
     return 0;
+}
+
+int test_db2()
+{
+    sakhadb* db = 0;
+    int rc = sakhadb_open("test.db", 0, &db);
+    if(rc != SAKHADB_OK)
+    {
+        assert(0);
+        return 1;
+    }
+    
+    char collname[] = "test_collection";
+    
+    sakhadb_collection_t collection;
+    rc = sakhadb_collection_create(db, collname, strlen(collname), &collection);
+    if(rc != SAKHADB_OK)
+    {
+        assert(0);
+        return 1;
+    }
+    
+    sakhadb_collection_destroy(collection);
+    
+    sakhadb_btree_ctx_t ctx = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
+    sakhadb_btree_ctx_commit(ctx);
+    
+    rc = sakhadb_close(db);
+    if(rc != SAKHADB_OK)
+    {
+        assert(0);
+        return 1;
+    }
+    
+    return 0;
+}
+
+int main(int argc, const char * argv[])
+{
+    return test_db2();
 }
 
