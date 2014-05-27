@@ -37,6 +37,90 @@ struct sakhadb
     sakhadb_dbdata_t    dbdata;     /* DbData */
 };
 
+struct sakhadb_collection
+{
+    sakhadb_btree_t     tree;
+    sakhadb*            db;
+};
+
+static int collectionCreate(sakhadb* db, const char* name, size_t length, struct sakhadb_collection** ppColl)
+{
+    int rc = SAKHADB_OK;
+    sakhadb_btree_cursor_t cursor = 0;
+    sakhadb_pager_t pager = db->pager;
+    sakhadb_btree_ctx_t ctx = db->ctx;
+    sakhadb_btree_t meta = 0;
+    
+    struct sakhadb_collection* coll = cpl_allocator_allocate(cpl_allocator_get_default(), sizeof(struct sakhadb_collection));
+    if(!coll)
+    {
+        rc = SAKHADB_NOMEM;
+        goto Lexit;
+    }
+    
+    rc = sakhadb_btree_create(ctx, 1, &meta);
+    if(rc)
+    {
+        goto Lfail;
+    }
+    
+    rc = sakhadb_btree_cursor_create(&cursor);
+    if(rc)
+    {
+        goto Lfail;
+    }
+    
+    int cmp = sakhadb_btree_find(meta, name, length, cursor);
+    Pgno no;
+    if(cmp != 0) // Add new collection to Database
+    {
+        sakhadb_page_t page;
+        rc = sakhadb_pager_request_free_page(pager, &page);
+        if(rc)
+        {
+            goto Lfail;
+        }
+        
+        rc = sakhadb_btree_cursor_insert(cursor, name, length, page->no);
+        if(rc)
+        {
+            goto Lfail;
+        }
+        
+        sakhadb_btree_init_new_root(ctx, page);
+        no = page->no;
+    }
+    else
+    {
+        no = sakhadb_btree_cursor_pgno(cursor);
+    }
+    
+    rc = sakhadb_btree_create(ctx, no, &coll->tree);
+    coll->db = db;
+    
+    *ppColl = coll;
+    
+    goto Lexit;
+    
+Lfail:
+    cpl_allocator_free(cpl_allocator_get_default(), coll);
+    
+Lexit:
+    sakhadb_btree_cursor_destroy(cursor);
+    sakhadb_btree_destroy(meta);
+    return rc;
+}
+
+static inline void collectionDestroy(sakhadb_collection* coll)
+{
+    sakhadb_btree_destroy(coll->tree);
+    cpl_allocator_free(cpl_allocator_get_default(), coll);
+}
+
+
+/******************* Public API routines  ********************/
+
+
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb)
 {
     SLOG_INFO("sakhadb_open: opening database [%s]", filename);
@@ -114,5 +198,93 @@ int sakhadb_close(sakhadb* db)
     }
     
     cpl_allocator_free(cpl_allocator_get_default(), db);
+    return rc;
+}
+
+int sakhadb_collection_load(sakhadb *db, const char *name, sakhadb_collection **ppColl)
+{
+    size_t length = strlen(name);
+    return collectionCreate(db, name, length, ppColl);
+}
+
+void sakhadb_collection_release(sakhadb_collection* coll)
+{
+    collectionDestroy(coll);
+}
+
+int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref doc)
+{
+    int rc = SAKHADB_OK;
+    bson_element_ref el = bson_document_get_first(doc);
+    if(strcmp(bson_element_fieldname(el), "_id") != 0)
+    {
+        rc = SAKHADB_INVALID_ARG;
+        goto Lexit;
+    }
+    
+    const void* key = bson_element_value(el);
+    size_t nkey = bson_element_size(el) - bson_element_key_size(el) - 1;
+    
+    Pgno no;
+    rc = sakhadb_dbdata_write(collection->db->dbdata, doc->data, bson_document_size(doc), &no);
+    if(rc)
+    {
+        goto Lexit;
+    }
+    
+    rc = sakhadb_btree_insert(collection->tree, key, nkey, no);
+    
+Lexit:
+    bson_element_destroy(el);
+    return rc;
+}
+
+int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref))
+{
+    int rc = SAKHADB_OK;
+    sakhadb_btree_cursor_t cursor = 0;
+    cpl_region_t region = {0, 0, 0};
+    
+    rc = sakhadb_btree_cursor_create(&cursor);
+    if(rc)
+    {
+        goto Lexit;
+    }
+    
+    rc = sakhadb_btree_cursor_begin(cursor, collection->tree);
+    if(rc)
+    {
+        goto Lexit;
+    }
+    
+    rc = cpl_region_init(&region, 64);
+    if(rc)
+    {
+        goto Lexit;
+    }
+    
+    do
+    {
+        // print info
+        rc = sakhadb_dbdata_read(collection->db->dbdata, sakhadb_btree_cursor_pgno(cursor), &region);
+        if(rc)
+        {
+            goto Lexit;
+        }
+        
+        pred(bson_document_create_with_data(region.data));
+        
+        rc = sakhadb_btree_cursor_next(cursor);
+        region.offset = 0;
+    } while(rc == SAKHADB_OK);
+    
+    if(rc == SAKHADB_NOTFOUND)
+    {
+        rc = SAKHADB_OK;
+    }
+    
+Lexit:
+    cpl_region_deinit(&region);
+    sakhadb_btree_cursor_destroy(cursor);
     return rc;
 }

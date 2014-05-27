@@ -33,7 +33,7 @@ typedef struct DBData* sakhadb_dbdata_t;
 int sakhadb_dbdata_create(sakhadb_pager_t pager, sakhadb_dbdata_t* data);
 void sakhadb_dbdata_destroy(sakhadb_dbdata_t);
 
-int sakhadb_dbdata_write(sakhadb_dbdata_t dbdata, void* data, size_t ndata, Pgno* pNo);
+int sakhadb_dbdata_write(sakhadb_dbdata_t dbdata, const void* data, size_t ndata, Pgno* pNo);
 int sakhadb_dbdata_read(sakhadb_dbdata_t dbdata, Pgno no, cpl_region_ref reg);
 
 #endif // _SAKHADB_DBDATA_H_

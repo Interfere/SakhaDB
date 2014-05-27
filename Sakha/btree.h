@@ -37,6 +37,7 @@ int sakhadb_btree_ctx_rollback(sakhadb_btree_ctx_t ctx);
 
 int sakhadb_btree_create(sakhadb_btree_ctx_t ctx, Pgno no, sakhadb_btree_t* tree);
 void sakhadb_btree_destroy(sakhadb_btree_t tree);
+void sakhadb_btree_init_new_root(sakhadb_btree_ctx_t ctx, sakhadb_page_t page);
 
 int sakhadb_btree_insert(sakhadb_btree_t tree, const void* key, size_t nkey, Pgno no);
 int sakhadb_btree_find(sakhadb_btree_t tree, const void* key, size_t nkey, sakhadb_btree_cursor_t cursor);
@@ -45,5 +46,9 @@ int sakhadb_btree_cursor_create(sakhadb_btree_cursor_t* cursor);
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
 
 Pgno sakhadb_btree_cursor_pgno(sakhadb_btree_cursor_t cursor);
+int sakhadb_btree_cursor_insert(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey, Pgno no);
+
+int sakhadb_btree_cursor_begin(sakhadb_btree_cursor_t cursor, sakhadb_btree_t tree);
+int sakhadb_btree_cursor_next(sakhadb_btree_cursor_t cursor);
 
 #endif // _SAKHADB_BTREE_H_

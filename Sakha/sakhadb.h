@@ -21,6 +21,8 @@
 #ifndef _SAKHADB_H_
 #define _SAKHADB_H_
 
+#include <bson/document.h>
+
 /**
  * This is a magic string that appears at the beginning of every
  * Sakha database in order to identify the file as a real dsatabase.
@@ -46,6 +48,14 @@
 typedef struct sakhadb sakhadb;
 
 /**
+ * Collection handle
+ *
+ * Each collection in Sakha database is accessed by a pointer to an instance of the opaque
+ * structure named "sakhadb_collection".
+ */
+typedef struct sakhadb_collection sakhadb_collection;
+
+/**
  * Opening a new database connection.
  */
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb);
@@ -54,6 +64,26 @@ int sakhadb_open(const char *filename, int flags, sakhadb **ppDb);
  * Closing a database connection.
  */
 int sakhadb_close(sakhadb* db);
+
+/**
+ * Loads collection.
+ */
+int sakhadb_collection_load(sakhadb *db, const char *name, sakhadb_collection **ppColl);
+
+/**
+ * Releases collection.
+ */
+void sakhadb_collection_release(sakhadb_collection* coll);
+
+/**
+ * Insert new item in collection.
+ */
+int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref doc);
+
+/**
+ * List collection.
+ */
+int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref));
 
 /**
  * Results Codes

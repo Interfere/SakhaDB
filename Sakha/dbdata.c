@@ -73,12 +73,12 @@ void sakhadb_dbdata_destroy(sakhadb_dbdata_t dbdata)
     cpl_allocator_free(cpl_allocator_get_default(), dbdata);
 }
 
-int sakhadb_dbdata_write(sakhadb_dbdata_t dbdata, void* data, size_t ndata, Pgno* pNo)
+int sakhadb_dbdata_write(sakhadb_dbdata_t dbdata, const void* data, size_t ndata, Pgno* pNo)
 {
     SLOG_DBDATA_INFO("sakhadb_dbdata_write: save data to page [0x%x][len: %d]", dbdata, ndata);
     int rc;
     Pgno* pData;
-    char* inData = data;
+    const char* inData = data;
     size_t area_size = sakhadb_pager_page_size(dbdata->pager, 0) - sizeof(Pgno);
     
     sakhadb_page_t page;

@@ -23,68 +23,14 @@
 #include <string.h>
 
 #include <cpl/cpl_allocator.h>
+#include <bson/documentbuilder.h>
+#include <bson/oid.h>
 
+#include "logger.h"
 #include "sakhadb.h"
 #include "os.h"
 #include "btree.h"
 #include "dbdata.h"
-
-typedef sakhadb_btree_t sakhadb_collection_t;
-
-int sakhadb_collection_create(sakhadb* db, const char* name, size_t length, sakhadb_collection_t* coll)
-{
-    int rc = SAKHADB_OK;
-    sakhadb_btree_cursor_t cursor = 0;
-    sakhadb_pager_t pager = *(sakhadb_pager_t*)((char*)db + sizeof(sakhadb_file_t));
-    sakhadb_btree_ctx_t ctx = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
-    
-    sakhadb_btree_t meta = 0;
-    sakhadb_btree_create(ctx, 1, &meta);
-    
-    rc = sakhadb_btree_cursor_create(&cursor);
-    if(rc)
-    {
-        goto Lexit;
-    }
-    
-    int cmp = sakhadb_btree_find(meta, name, length, cursor);
-    Pgno no;
-    if(cmp != 0) // Add new collection to Database
-    {
-        sakhadb_page_t page;
-        rc = sakhadb_pager_request_free_page(pager, &page);
-        if(rc)
-        {
-            goto L1;
-        }
-        
-        rc = sakhadb_btree_insert(meta, name, length, page->no);
-        if(rc)
-        {
-            goto L1;
-        }
-        
-        no = page->no;
-    }
-    else
-    {
-        no = sakhadb_btree_cursor_pgno(cursor);
-    }
-    
-    rc = sakhadb_btree_create(ctx, no, coll);
-    
-L1:
-    sakhadb_btree_cursor_destroy(cursor);
-    
-Lexit:
-    sakhadb_btree_destroy(meta);
-    return rc;
-}
-
-void sakhadb_collection_destroy(sakhadb_collection_t collection)
-{
-    sakhadb_btree_destroy(collection);
-}
 
 int test_db()
 {
@@ -230,6 +176,32 @@ int test_db()
     return 0;
 }
 
+bson_document_ref test_create_doc()
+{
+    struct bson_oid oid;
+    bson_document_builder_ref builder = bson_document_builder_create();
+    bson_oid_init(&oid);
+    
+    bson_document_builder_append_oid(builder, "_id", &oid);
+    bson_document_builder_append_str(builder, "name", "komnin");
+    bson_document_builder_append_i(builder, "age", 25);
+    
+    return bson_document_builder_finalize(builder);
+}
+
+int test_pred(bson_document_ref doc)
+{
+    bson_element_ref el = bson_document_get_first(doc);
+
+    bson_oid_ref oid = bson_oid_create_with_bytes(bson_element_value(el));
+    char* oidstr = bson_oid_string_create(oid);
+    bson_oid_destroy(oid);
+    SLOG_INFO("%s: %s\n", bson_element_fieldname(el), oid);
+    free(oidstr);
+    
+    return 0;
+}
+
 int test_db2()
 {
     sakhadb* db = 0;
@@ -242,15 +214,26 @@ int test_db2()
     
     char collname[] = "test_collection";
     
-    sakhadb_collection_t collection;
-    rc = sakhadb_collection_create(db, collname, strlen(collname), &collection);
+    sakhadb_collection* collection;
+    rc = sakhadb_collection_load(db, collname, &collection);
     if(rc != SAKHADB_OK)
     {
         assert(0);
         return 1;
     }
     
-    sakhadb_collection_destroy(collection);
+//    bson_document_ref doc = test_create_doc();
+//    
+//    rc = sakhadb_collection_insert(collection, doc);
+//    if(rc)
+//    {
+//        assert(0);
+//        return 1;
+//    }
+//    
+//    bson_document_destroy(doc);
+    
+    sakhadb_collection_release(collection);
     
     sakhadb_btree_ctx_t ctx = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
     sakhadb_btree_ctx_commit(ctx);
