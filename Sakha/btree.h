@@ -22,6 +22,8 @@
 #define _SAKHADB_BTREE_H_
 
 #include <stdint.h>
+#include <cpl/cpl_region.h>
+
 #include "paging.h"
 
 typedef struct Btree* sakhadb_btree_t;
@@ -41,6 +43,7 @@ void sakhadb_btree_init_new_root(sakhadb_btree_ctx_t ctx, sakhadb_page_t page);
 
 int sakhadb_btree_insert(sakhadb_btree_t tree, const void* key, size_t nkey, Pgno no);
 int sakhadb_btree_find(sakhadb_btree_t tree, const void* key, size_t nkey, sakhadb_btree_cursor_t cursor);
+int sakhadb_btree_dump(sakhadb_btree_t tree, cpl_region_ref region);
 
 int sakhadb_btree_cursor_create(sakhadb_btree_cursor_t* cursor);
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);

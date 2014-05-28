@@ -22,6 +22,7 @@
 #define _SAKHADB_H_
 
 #include <bson/document.h>
+#include <cpl/cpl_region.h>
 
 /**
  * This is a magic string that appears at the beginning of every
@@ -84,6 +85,11 @@ int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref 
  * List collection.
  */
 int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref));
+
+/**
+ * Dump collection.
+ */
+int sakhadb_collection_dump(const sakhadb_collection* collection, cpl_region_ref region);
 
 /**
  * Results Codes

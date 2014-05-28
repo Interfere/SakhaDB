@@ -226,7 +226,7 @@ static int btreeFindKey(
         slot = slots + (lim>>1);
         char* stored_key = (char*)node + slot->off;
         cmp = memcmp(key, stored_key, (slot->sz < key_sz)?slot->sz:key_sz);
-        if(cmp == 0 && (cmp = key_sz - slots->sz) == 0)
+        if(cmp == 0 && (cmp = key_sz - slot->sz) == 0)
         {
             break;
         }
@@ -349,6 +349,97 @@ static inline int btreeNext(
     }
     
     return SAKHADB_OK;
+}
+
+static inline int btreeDumpPage(
+    sakhadb_btree_page_t page,      /* A page to dump */
+    sakhadb_btree_ctx_t  ctx,       /* Context */
+    cpl_region_ref prefix,          /* Offset level prefix */
+    cpl_region_ref region           /* Output: dumped data */
+)
+{
+    int rc = SAKHADB_OK;
+    char templ[] = " (%d)\n";
+    char buffer[64];
+    sakhadb_btree_node_t node = page->header;
+    sakhadb_btree_slot_t* slots = btreeGetSlots(node);
+    
+    if(node->nslots == 0)
+    {
+        goto Lexit;
+    }
+    
+    for(int i = node->nslots-1; i >= 0; --i)
+    {
+        if(!node->flags)
+        {
+            sakhadb_btree_page_t new_page;
+            rc = btreeLoadNode(ctx, slots[i].no, &new_page);
+            if(rc)
+            {
+                goto Lexit;
+            }
+            
+            cpl_region_append_data(prefix, "|    ", 5);
+            btreeDumpPage(new_page, ctx, prefix, region);
+            prefix->offset -= 5;
+        }
+        
+        if(prefix->offset > 0)
+        {
+            cpl_region_append_region(region, prefix);
+        }
+        
+        if(i == 0)
+        {
+            cpl_region_append_data(region, "+-- ", 4);
+        }
+        else
+        {
+            cpl_region_append_data(region, "|-- ", 4);
+        }
+        cpl_region_append_data(region, btreeNodeOffset(node, slots[i].off), slots[i].sz);
+        sprintf(buffer, templ, slots[i].no);
+        cpl_region_append_data(region, buffer, strlen(buffer));
+    }
+    
+    if(!node->flags)
+    {
+        sakhadb_btree_page_t new_page;
+        rc = btreeLoadNode(ctx, node->right, &new_page);
+        if(rc)
+        {
+            goto Lexit;
+        }
+        
+        cpl_region_append_data(prefix, "     ", 5);
+        btreeDumpPage(new_page, ctx, prefix, region);
+        prefix->offset -= 5;
+    }
+    
+Lexit:
+    return rc;
+}
+
+static inline int btreeDump(
+    sakhadb_btree_t tree,   /* A tree to dump */
+    cpl_region_ref region   /* Output: dumped data */
+)
+{
+    int rc = SAKHADB_OK;
+    region->offset = 0;
+    char root[] = "root (%d)\n";
+    char buffer[64];
+    cpl_region_t prefix;
+    cpl_region_init(&prefix, 64);
+    
+    sprintf(buffer, root, tree->root->no);
+    cpl_region_append_data(region, buffer, strlen(buffer));
+    rc = btreeDumpPage(tree->root, tree->ctx, &prefix, region);
+    
+    cpl_region_deinit(&prefix);
+    
+    return rc;
 }
 
 /****************************** Split Section *********************************/
@@ -715,6 +806,7 @@ static inline int btreeInsert(
     assert(nkey < sakhadb_pager_page_size(tree->ctx->pager, 0) / 5);
     int rc = SAKHADB_OK;
     struct BtreeCursorStack stack;
+    stack.tree = tree;
     rc = cpl_array_init(&stack.st, sizeof(struct BtreeCursorPointer), 16);
     if(rc)
     {
@@ -891,6 +983,11 @@ int sakhadb_btree_find(sakhadb_btree_t tree, const void* key, size_t nkey, sakha
     cursor->tree = tree;
     
     return cmp;
+}
+
+int sakhadb_btree_dump(sakhadb_btree_t tree, cpl_region_ref region)
+{
+    return btreeDump(tree, region);
 }
 
 int sakhadb_btree_cursor_create(sakhadb_btree_cursor_t* cursor)

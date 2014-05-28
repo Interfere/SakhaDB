@@ -130,6 +130,7 @@ int test_db()
         "indx_index_index_index_index_index_index.t69"
     };
     
+    
     for (int32_t i = 0; i < sizeof(key)/sizeof(key[0]); ++i)
     {
         register int32_t len = (int32_t)strlen(key[i]);
@@ -150,20 +151,29 @@ int test_db()
     
     sakhadb_btree_ctx_commit(env);
     
-    int idx = 25;
-    register int32_t len = (int32_t)strlen(key[idx]);
-    sakhadb_btree_cursor_t cursor = 0;
-    int cmp = 0;
-    cmp = sakhadb_btree_find(meta, key[idx], len, cursor);
-    Pgno no = sakhadb_btree_cursor_pgno(cursor);
-    sakhadb_btree_cursor_destroy(cursor);
+//    int idx = 25;
+//    register int32_t len = (int32_t)strlen(key[idx]);
+//    sakhadb_btree_cursor_t cursor = 0;
+//    int cmp = 0;
+//    cmp = sakhadb_btree_find(meta, key[idx], len, cursor);
+//    Pgno no = sakhadb_btree_cursor_pgno(cursor);
+//    sakhadb_btree_cursor_destroy(cursor);
+//    
+//    cpl_region_t reg;
+//    cpl_region_init(&reg, 0);
+//    sakhadb_dbdata_read(dbdata, no, &reg);
+//    
+//    void* d = reg.data;
+//    
+//    cpl_region_deinit(&reg);
     
     cpl_region_t reg;
-    cpl_region_init(&reg, 0);
-    sakhadb_dbdata_read(dbdata, no, &reg);
+    cpl_region_init(&reg, 64);
+    sakhadb_btree_dump(meta, &reg);
     
-    void* d = reg.data;
-    
+    cpl_region_append_data(&reg, "\0", 1);
+    char* dumpstr = reg.data;
+    puts(dumpstr);
     cpl_region_deinit(&reg);
     
     rc = sakhadb_close(db);
@@ -251,6 +261,6 @@ int test_db2()
 
 int main(int argc, const char * argv[])
 {
-    return test_db2();
+    return test_db();
 }
 

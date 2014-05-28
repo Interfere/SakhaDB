@@ -29,7 +29,7 @@
 /**
  * Turn on/off logging for dbdata routines
  */
-#define SLOG_DBDATA_ENABLE    1
+//#define SLOG_DBDATA_ENABLE    1
 
 #if SLOG_DBDATA_ENABLE
 #   define SLOG_DBDATA_INFO  SLOG_INFO
