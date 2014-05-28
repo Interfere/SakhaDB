@@ -287,8 +287,3 @@ Lexit:
     sakhadb_btree_cursor_destroy(cursor);
     return rc;
 }
-
-int sakhadb_collection_dump(const sakhadb_collection* collection, cpl_region_ref region)
-{
-    return sakhadb_btree_dump(collection->tree, region);
-}

@@ -87,11 +87,6 @@ int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref 
 int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref));
 
 /**
- * Dump collection.
- */
-int sakhadb_collection_dump(const sakhadb_collection* collection, cpl_region_ref region);
-
-/**
  * Results Codes
  *
  * Many SakhaDB functions return an integer result code from the set shown

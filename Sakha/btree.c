@@ -328,6 +328,7 @@ static inline int btreeNext(
     struct BtreeCursorStack* stack          /* Out param: stack that contains cursors */
 )
 {
+    int rc = SAKHADB_OK;
     struct BtreeCursorPointer* cur = (struct BtreeCursorPointer *)cpl_array_back_p(&stack->st);
     sakhadb_btree_node_t node = cur->page->header;
     if(++cur->index >= node->nslots)
@@ -335,20 +336,41 @@ static inline int btreeNext(
         Pgno no = node->right;
         if(!no)
         {
-            return SAKHADB_NOTFOUND;
+            rc = SAKHADB_NOTFOUND;
+            goto Lexit;
         }
         
-        int rc = btreeLoadNode(tree->ctx, node->right, &cur->page);
+        rc = btreeLoadNode(tree->ctx, node->right, &cur->page);
         if(rc)
         {
             SLOG_BTREE_ERROR("btreeNext: failed to fetch page [%d]", node->right);
-            return rc;
+            goto Lexit;
         }
         
         cur->index = 0;
+        
+        size_t i = cpl_array_count(&stack->st) - 1;
+        do
+        {
+            cur = (struct BtreeCursorPointer *)cpl_array_get_p(&stack->st, --i);
+            if(cur->page->header->nslots > ++cur->index)
+            {
+                no = btreeGetDataPgno(cur->page->header, cur->index);
+                break;
+            }
+        } while(i > 0);
+        
+        while (++i < cpl_array_count(&stack->st) - 1)
+        {
+            cur = (struct BtreeCursorPointer *)cpl_array_get_p(&stack->st, i);
+            btreeLoadNode(tree->ctx, no, &cur->page);
+            cur->index = 0;
+            no = btreeGetDataPgno(cur->page->header, 0);
+        }
     }
     
-    return SAKHADB_OK;
+Lexit:
+    return rc;
 }
 
 static inline int btreeDumpPage(
