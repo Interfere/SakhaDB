@@ -196,7 +196,7 @@ int test_pred(bson_document_ref doc)
     bson_oid_ref oid = bson_oid_create_with_bytes(bson_element_value(el));
     char* oidstr = bson_oid_string_create(oid);
     bson_oid_destroy(oid);
-    SLOG_INFO("%s: %s\n", bson_element_fieldname(el), oid);
+    SLOG_INFO("%s: %s\n", bson_element_fieldname(el), oidstr);
     free(oidstr);
     
     return 0;
@@ -221,7 +221,6 @@ int test_db2()
         assert(0);
         return 1;
     }
-    
 //    bson_document_ref doc = test_create_doc();
 //    
 //    rc = sakhadb_collection_insert(collection, doc);
@@ -232,6 +231,8 @@ int test_db2()
 //    }
 //    
 //    bson_document_destroy(doc);
+    
+    sakhadb_collection_foreach(collection, test_pred);
     
     sakhadb_collection_release(collection);
     

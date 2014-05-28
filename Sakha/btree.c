@@ -34,7 +34,7 @@
 /**
  * Turn on/off logging for btree routines
  */
-#define SLOG_BTREE_ENABLE    1
+//#define SLOG_BTREE_ENABLE    1
 
 #if SLOG_BTREE_ENABLE
 #   define SLOG_BTREE_INFO  SLOG_INFO
@@ -263,6 +263,10 @@ static int btreeFirst(
         
         if(node->flags)
         {
+            if(cur == -1)
+            {
+                rc = SAKHADB_NOTFOUND;
+            }
             break;
         }
         
@@ -849,6 +853,7 @@ void sakhadb_btree_init_new_root(sakhadb_btree_ctx_t ctx, sakhadb_page_t page)
     node->free_off = sizeof(struct BtreePageHeader);
     node->free_sz = node->slots_off - sizeof(struct BtreePageHeader);
     node->flags = SAKHADB_BTREE_LEAF;
+    node->right = 0;
 }
 
 int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t ctx)

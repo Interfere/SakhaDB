@@ -278,12 +278,12 @@ int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(
         region.offset = 0;
     } while(rc == SAKHADB_OK);
     
+Lexit:
     if(rc == SAKHADB_NOTFOUND)
     {
         rc = SAKHADB_OK;
     }
     
-Lexit:
     cpl_region_deinit(&region);
     sakhadb_btree_cursor_destroy(cursor);
     return rc;
