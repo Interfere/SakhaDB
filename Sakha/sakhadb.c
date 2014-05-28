@@ -223,7 +223,7 @@ int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref 
     }
     
     const void* key = bson_element_value(el);
-    size_t nkey = bson_element_size(el) - bson_element_key_size(el) - 1;
+    size_t nkey = bson_element_value_size(el);
     
     Pgno no;
     rc = sakhadb_dbdata_write(collection->db->dbdata, doc->data, bson_document_size(doc), &no);
@@ -235,7 +235,6 @@ int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref 
     rc = sakhadb_btree_insert(collection->tree, key, nkey, no);
     
 Lexit:
-    bson_element_destroy(el);
     return rc;
 }
 

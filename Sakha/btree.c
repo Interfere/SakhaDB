@@ -439,6 +439,8 @@ static inline int btreeDump(
     
     cpl_region_deinit(&prefix);
     
+    cpl_region_append_data(region, "\0", 1);
+    
     return rc;
 }
 

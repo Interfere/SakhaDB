@@ -13,7 +13,6 @@
 		6C397590188D3B0A00B20127 /* cpl_allocator.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C39758F188D3B0A00B20127 /* cpl_allocator.c */; };
 		6C3A2C21182D2E280092E169 /* logger.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C20182D2E280092E169 /* logger.c */; };
 		6C3A2C25182D35E70092E169 /* os_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C3A2C24182D35E70092E169 /* os_posix.c */; };
-		6C8735FB188834F100E83C91 /* document.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F0188834F100E83C91 /* document.c */; };
 		6C8735FC188834F100E83C91 /* documentbuilder.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F2188834F100E83C91 /* documentbuilder.c */; };
 		6C8735FD188834F100E83C91 /* element.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F4188834F100E83C91 /* element.c */; };
 		6C8735FE188834F100E83C91 /* iterator.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8735F6188834F100E83C91 /* iterator.c */; };
@@ -55,7 +54,6 @@
 		6C3A2C24182D35E70092E169 /* os_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = os_posix.c; sourceTree = "<group>"; };
 		6C3A2C26182D36730092E169 /* sakhadb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sakhadb.h; sourceTree = "<group>"; };
 		6C8735EF188834F100E83C91 /* bsontypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bsontypes.h; sourceTree = "<group>"; };
-		6C8735F0188834F100E83C91 /* document.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = document.c; sourceTree = "<group>"; };
 		6C8735F1188834F100E83C91 /* document.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = document.h; sourceTree = "<group>"; };
 		6C8735F2188834F100E83C91 /* documentbuilder.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = documentbuilder.c; sourceTree = "<group>"; };
 		6C8735F3188834F100E83C91 /* documentbuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = documentbuilder.h; sourceTree = "<group>"; };
@@ -171,7 +169,6 @@
 		6C8736131888354800E83C91 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				6C8735F0188834F100E83C91 /* document.c */,
 				6C8735F2188834F100E83C91 /* documentbuilder.c */,
 				6C8735F4188834F100E83C91 /* element.c */,
 				6C8735F6188834F100E83C91 /* iterator.c */,
@@ -219,10 +216,10 @@
 				6CF34936182BD10E00887952 /* main.c */,
 				6C3A2C23182D33FF0092E169 /* os.h */,
 				6C3A2C24182D35E70092E169 /* os_posix.c */,
-				6C3A2C26182D36730092E169 /* sakhadb.h */,
-				6C2CACA718338E6F007ACC65 /* sakhadb.c */,
 				6CA099121834BD3D00A42DE9 /* paging.h */,
 				6CA099131834C0FF00A42DE9 /* paging.c */,
+				6C3A2C26182D36730092E169 /* sakhadb.h */,
+				6C2CACA718338E6F007ACC65 /* sakhadb.c */,
 			);
 			path = Sakha;
 			sourceTree = "<group>";
@@ -294,7 +291,6 @@
 				6C8735FE188834F100E83C91 /* iterator.c in Sources */,
 				6CA099141834C0FF00A42DE9 /* paging.c in Sources */,
 				6C397590188D3B0A00B20127 /* cpl_allocator.c in Sources */,
-				6C8735FB188834F100E83C91 /* document.c in Sources */,
 				6C8736091888350000E83C91 /* cpl_region.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

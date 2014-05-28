@@ -231,18 +231,18 @@ int test_db2()
         assert(0);
         return 1;
     }
-//    bson_document_ref doc = test_create_doc();
-//    
-//    rc = sakhadb_collection_insert(collection, doc);
-//    if(rc)
-//    {
-//        assert(0);
-//        return 1;
-//    }
-//    
-//    bson_document_destroy(doc);
+    bson_document_ref doc = test_create_doc();
     
-    sakhadb_collection_foreach(collection, test_pred);
+    rc = sakhadb_collection_insert(collection, doc);
+    if(rc)
+    {
+        assert(0);
+        return 1;
+    }
+    
+    bson_document_destroy(doc);
+    
+//    sakhadb_collection_foreach(collection, test_pred);
     
     sakhadb_collection_release(collection);
     
@@ -261,6 +261,6 @@ int test_db2()
 
 int main(int argc, const char * argv[])
 {
-    return test_db();
+    return test_db2();
 }
 
