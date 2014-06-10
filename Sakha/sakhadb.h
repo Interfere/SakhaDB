@@ -22,6 +22,7 @@
 #define _SAKHADB_H_
 
 #include <bson/document.h>
+#include <bson/oid.h>
 #include <cpl/cpl_region.h>
 
 /**
@@ -57,6 +58,16 @@ typedef struct sakhadb sakhadb;
 typedef struct sakhadb_collection sakhadb_collection;
 
 /**
+ * Statement handle
+ */
+typedef struct sakhadb_stmt sakhadb_stmt;
+
+/**
+ * Predicate
+ */
+typedef struct sakhadb_pred sakhadb_pred;
+
+/**
  * Opening a new database connection.
  */
 int sakhadb_open(const char *filename, int flags, sakhadb **ppDb);
@@ -85,6 +96,15 @@ int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref 
  * List collection.
  */
 int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref));
+
+int sakhadb_pred_create(int a, bson_element_ref el, sakhadb_pred** ppPred);
+void sakhadb_pred_destroy(sakhadb_pred* pred);
+
+int sakhadb_pred_add_cond(sakhadb_pred* pred, int a, bson_element_ref el);
+
+int sakhadb_prepare(const sakhadb_pred* pred, sakhadb_stmt** ppStmt);
+int sakhadb_step(sakhadb_stmt* stmt);
+int sakhadb_finalize(sakhadb_stmt* stmt);
 
 /**
  * Results Codes

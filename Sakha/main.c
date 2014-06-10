@@ -259,8 +259,24 @@ int test_db2()
     return 0;
 }
 
+int test_allocator()
+{
+    cpl_allocator_ref allocator = cpl_allocator_create_dl(0x1000000);
+    
+    void* ptr_a = cpl_allocator_allocate(allocator, 16);
+    void* ptr_b = cpl_allocator_allocate(allocator, 16);
+    
+    cpl_allocator_free(allocator, ptr_a);
+    cpl_allocator_free(allocator, ptr_b);
+    
+    void* ptr_c = cpl_allocator_allocate(allocator, 32);
+    
+    cpl_allocator_destroy_dl(allocator);
+    return 0;
+}
+
 int main(int argc, const char * argv[])
 {
-    return test_db2();
+    return test_allocator();
 }
 
