@@ -18,29 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _SAKHADB_BTREE_H_
-#define _SAKHADB_BTREE_H_
+#ifndef _SAKHADB_CURSOR_H_
+#define _SAKHADB_CURSOR_H_
 
-#include <stdint.h>
-#include <cpl/cpl_region.h>
+#include <cpl/cpl_array.h>
 
-#include "paging.h"
+#include "btree.h"
 
-typedef struct Btree* sakhadb_btree_t;
-typedef struct BtreeContext* sakhadb_btree_ctx_t;
-typedef struct BtreePageHeader* sakhadb_btree_node_t;
+typedef struct BtreeCursorStack* sakhadb_btree_cursor_t;
+struct BtreeCursorStack
+{
+    sakhadb_btree_t         tree;
+    cpl_array_t             st;         /* stack of cursors */
+    int                     dirty;
+    cpl_region_t            region;
+};
 
-int sakhadb_btree_ctx_create(sakhadb_pager_t pager, sakhadb_btree_ctx_t* ctx);
-void sakhadb_btree_ctx_destroy(sakhadb_btree_ctx_t ctx);
+int sakhadb_btree_cursor_create(sakhadb_btree_t tree, sakhadb_btree_cursor_t* cursor);
+void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor);
 
-int sakhadb_btree_ctx_commit(sakhadb_btree_ctx_t ctx);
-int sakhadb_btree_ctx_rollback(sakhadb_btree_ctx_t ctx);
+int sakhadb_btree_cursor_first(sakhadb_btree_cursor_t cursor);
+int sakhadb_btree_cursor_last(sakhadb_btree_cursor_t cursor);
 
-int sakhadb_btree_create(sakhadb_btree_ctx_t ctx, Pgno no, sakhadb_btree_t* tree);
-void sakhadb_btree_destroy(sakhadb_btree_t tree);
-void sakhadb_btree_init_new_root(sakhadb_btree_ctx_t ctx, sakhadb_page_t page);
+int sakhadb_btree_cursor_next(sakhadb_btree_cursor_t cursor);
+int sakhadb_btree_cursor_prev(sakhadb_btree_cursor_t cursor);
 
-int sakhadb_btree_insert(sakhadb_btree_t tree, const void* key, size_t nkey, Pgno no);
-int sakhadb_btree_dump(sakhadb_btree_t tree, cpl_region_ref region);
+Pgno sakhadb_btree_cursor_pgno(sakhadb_btree_cursor_t cursor);
+int sakhadb_cursor_find(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey);
+int sakhadb_btree_cursor_insert(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey, Pgno no);
 
-#endif // _SAKHADB_BTREE_H_
+#endif // _SAKHADB_CURSOR_H_

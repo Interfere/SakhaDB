@@ -20,14 +20,15 @@
 
 #include "btree.h"
 
-#include "sakhadb.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <cpl/cpl_allocator.h>
 #include <cpl/cpl_array.h>
 #include <cpl/cpl_error.h>
 
+#include "sakhadb.h"
 #include "logger.h"
+#include "cursor.h"
 
 #define SAKHADB_BTREE_LEAF      0x1
 
@@ -89,23 +90,17 @@ struct Btree
     sakhadb_btree_page_t    root;       /* Root page */
 };
 
-struct BtreeCursorPointer
-{
-    sakhadb_btree_page_t    page;
-    int                     index;
-};
-
-struct BtreeCursorStack
-{
-    sakhadb_btree_t         tree;
-    cpl_array_t             st;         /* stack of cursors */
-};
-
 struct BtreeSplitResult
 {
     void*                   data;       /* pointer to key data */
     size_t                  size;       /* size of key */
     sakhadb_btree_page_t    new_page;
+};
+
+struct BtreeCursorPointer
+{
+    sakhadb_btree_page_t    page;
+    int                     index;
 };
 
 /****************************** B-tree Section ********************************/
@@ -247,12 +242,12 @@ static int btreeFindKey(
 }
 
 static int btreeFirst(
-    sakhadb_btree_t tree,                   /* A target */
     struct BtreeCursorStack* stack          /* Out param: stack that contains cursors */
 )
 {
     int rc = SAKHADB_OK;
     SLOG_BTREE_INFO("btreeFirst: fetch first entry of tree [%d]", tree->root->no);
+    sakhadb_btree_t tree = stack->tree;
     sakhadb_btree_page_t page = tree->root;
     while(rc == SAKHADB_OK)
     {
@@ -348,25 +343,7 @@ static inline int btreeNext(
         }
         
         cur->index = 0;
-        
-        size_t i = cpl_array_count(&stack->st) - 1;
-        do
-        {
-            cur = (struct BtreeCursorPointer *)cpl_array_get_p(&stack->st, --i);
-            if(cur->page->header->nslots > ++cur->index)
-            {
-                no = btreeGetDataPgno(cur->page->header, cur->index);
-                break;
-            }
-        } while(i > 0);
-        
-        while (++i < cpl_array_count(&stack->st) - 1)
-        {
-            cur = (struct BtreeCursorPointer *)cpl_array_get_p(&stack->st, i);
-            btreeLoadNode(tree->ctx, no, &cur->page);
-            cur->index = 0;
-            no = btreeGetDataPgno(cur->page->header, 0);
-        }
+        stack->dirty = 1;
     }
     
 Lexit:
@@ -453,7 +430,7 @@ static inline int btreeDump(
     char root[] = "root (%d)\n";
     char buffer[64];
     cpl_region_t prefix;
-    cpl_region_init(&prefix, 64);
+    cpl_region_init(cpl_allocator_get_default(), &prefix, 64);
     
     sprintf(buffer, root, tree->root->no);
     cpl_region_append_data(region, buffer, strlen(buffer));
@@ -858,7 +835,7 @@ Lexit:
 
 /****************************** Cursor Section ********************************/
 
-static inline int btreeCreateCursor(sakhadb_btree_cursor_t* pCursor)
+static inline int btreeCreateCursor(sakhadb_btree_t tree, sakhadb_btree_cursor_t* pCursor)
 {
     SLOG_BTREE_INFO("btreeCreateCursor: create cursor");
     
@@ -875,6 +852,8 @@ static inline int btreeCreateCursor(sakhadb_btree_cursor_t* pCursor)
     
     if(rc == SAKHADB_OK)
     {
+        cursor->tree = tree;
+        cursor->dirty = 0;
         *pCursor = cursor;
         return SAKHADB_OK;
     }
@@ -998,13 +977,12 @@ int sakhadb_btree_insert(sakhadb_btree_t tree, const void* key, size_t nkey, Pgn
     return btreeInsert(tree, key, nkey, no);
 }
 
-int sakhadb_btree_find(sakhadb_btree_t tree, const void* key, size_t nkey, sakhadb_btree_cursor_t cursor)
+int sakhadb_cursor_find(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey)
 {
-    assert(tree && key && nkey);
+    assert(cursor->tree && key && nkey);
     SLOG_BTREE_INFO("sakhadb_btree_find: find key in tree [%d][%d]", tree->root->no, nkey);
     
-    int cmp = btreeFind(tree, key, nkey, cursor);
-    cursor->tree = tree;
+    int cmp = btreeFind(cursor->tree, key, nkey, cursor);
     
     return cmp;
 }
@@ -1014,9 +992,9 @@ int sakhadb_btree_dump(sakhadb_btree_t tree, cpl_region_ref region)
     return btreeDump(tree, region);
 }
 
-int sakhadb_btree_cursor_create(sakhadb_btree_cursor_t* cursor)
+int sakhadb_btree_cursor_create(sakhadb_btree_t tree, sakhadb_btree_cursor_t* cursor)
 {
-    return btreeCreateCursor(cursor);
+    return btreeCreateCursor(tree, cursor);
 }
 
 void sakhadb_btree_cursor_destroy(sakhadb_btree_cursor_t cursor)
@@ -1038,10 +1016,9 @@ Pgno sakhadb_btree_cursor_pgno(sakhadb_btree_cursor_t cursor)
     return btreeGetDataPgno(ptr->page->header, ptr->index);
 }
 
-int sakhadb_btree_cursor_begin(sakhadb_btree_cursor_t cursor, sakhadb_btree_t tree)
+int sakhadb_btree_cursor_first(sakhadb_btree_cursor_t cursor)
 {
-    cursor->tree = tree;
-    return btreeFirst(tree, cursor);
+    return btreeFirst(cursor);
 }
 
 int sakhadb_btree_cursor_next(sakhadb_btree_cursor_t cursor)

@@ -28,18 +28,7 @@
 #include "os.h"
 #include "btree.h"
 #include "dbdata.h"
-
-struct sakhadb_pred_cond
-{
-    bson_element_ref    el;
-    int                 a;
-    struct sakhadb_pred_cond *next;
-};
-
-struct sakhadb_pred
-{
-    struct sakhadb_pred_cond* next;
-};
+#include "cursor.h"
 
 struct sakhadb
 {
@@ -53,12 +42,6 @@ struct sakhadb_collection
 {
     sakhadb_btree_t     tree;
     sakhadb*            db;
-};
-
-struct sakhadb_stmt
-{
-    sakhadb_collection* coll;
-    sakhadb_pred*       pred;
 };
 
 static int collectionCreate(sakhadb* db, const char* name, size_t length, struct sakhadb_collection** ppColl)
@@ -82,13 +65,13 @@ static int collectionCreate(sakhadb* db, const char* name, size_t length, struct
         goto Lfail;
     }
     
-    rc = sakhadb_btree_cursor_create(&cursor);
+    rc = sakhadb_btree_cursor_create(meta, &cursor);
     if(rc)
     {
         goto Lfail;
     }
     
-    int cmp = sakhadb_btree_find(meta, name, length, cursor);
+    int cmp = sakhadb_cursor_find(cursor, name, length);
     Pgno no;
     if(cmp != 0) // Add new collection to Database
     {
@@ -256,25 +239,60 @@ Lexit:
     return rc;
 }
 
+int sakhadb_collection_find(sakhadb_collection* collection, sakhadb_cursor **pCur)
+{
+    int rc = SAKHADB_OK;
+
+    sakhadb_btree_cursor_t cursor;
+    rc = sakhadb_btree_cursor_create(collection->tree, &cursor);
+    if(rc)
+    {
+        goto Lexit;
+    }
+    
+    rc = sakhadb_btree_cursor_first(cursor);
+    if(rc)
+    {
+        sakhadb_btree_cursor_destroy(cursor);
+    }
+    
+    *pCur = (sakhadb_cursor *)cursor;
+    
+Lexit:
+    return rc;
+}
+
+int sakhadb_cursor_next(sakhadb_cursor *cur)
+{
+    return sakhadb_btree_cursor_next((sakhadb_btree_cursor_t)cur);
+}
+
+int sakhadb_cursor_data(sakhadb_cursor *cur, bson_document_ref* doc)
+{
+    int rc = SAKHADB_OK;
+    
+    return rc;
+}
+
 int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref))
 {
     int rc = SAKHADB_OK;
     sakhadb_btree_cursor_t cursor = 0;
     cpl_region_t region = {0, 0, 0};
     
-    rc = sakhadb_btree_cursor_create(&cursor);
+    rc = sakhadb_btree_cursor_create(collection->tree, &cursor);
     if(rc)
     {
         goto Lexit;
     }
     
-    rc = sakhadb_btree_cursor_begin(cursor, collection->tree);
+    rc = sakhadb_btree_cursor_first(cursor);
     if(rc)
     {
         goto Lexit;
     }
     
-    rc = cpl_region_init(&region, 64);
+    rc = cpl_region_init(cpl_allocator_get_default(), &region, 64);
     if(rc)
     {
         goto Lexit;
@@ -303,74 +321,6 @@ Lexit:
     
     cpl_region_deinit(&region);
     sakhadb_btree_cursor_destroy(cursor);
-    return rc;
-}
-
-static inline int predCreateCond(cpl_allocator_ref allocator, int a, bson_element_ref el,
-                                 struct sakhadb_pred_cond** ppCond)
-{
-    struct sakhadb_pred_cond* cond = (struct sakhadb_pred_cond *)cpl_allocator_allocate(allocator, sizeof(struct sakhadb_pred_cond));
-    if(!cond)
-    {
-        return SAKHADB_NOMEM;
-    }
-    
-    cond->a = a;
-    cond->el = el;
-    cond->next = 0;
-    
-    *ppCond = cond;
-    return SAKHADB_OK;
-}
-
-int sakhadb_pred_create(int a, bson_element_ref el, sakhadb_pred** ppPred)
-{
-    sakhadb_pred* pred = (sakhadb_pred *)cpl_allocator_allocate(cpl_allocator_get_default(), sizeof(struct sakhadb_pred));
-    if(!pred)
-    {
-        return SAKHADB_NOMEM;
-    }
-    
-    struct sakhadb_pred_cond* cond;
-    int rc = predCreateCond(cpl_allocator_get_default(), a, el, &cond);
-    if(rc)
-    {
-        cpl_allocator_free(cpl_allocator_get_default(), pred);
-        return rc;
-    }
-    
-    pred->next = cond;
-    
-    *ppPred = pred;
-    return SAKHADB_OK;
-}
-
-void sakhadb_pred_destroy(sakhadb_pred* pred)
-{
-    cpl_allocator_ref allocator = cpl_allocator_get_default();
-    
-    struct sakhadb_pred_cond *cond, *tmp;
-    for(cond = pred->next, tmp = cond->next; cond; cond = tmp, tmp = tmp->next)
-    {
-        cpl_allocator_free(allocator, cond);
-    }
-    
-    cpl_allocator_free(allocator, pred);
-}
-
-int sakhadb_pred_add_cond(sakhadb_pred* pred, int a, bson_element_ref el)
-{
-    struct sakhadb_pred_cond *cond;
-    int rc = predCreateCond(cpl_allocator_get_default(), a, el, &cond);
-    if(rc)
-    {
-        goto Lexit;
-    }
-    
-    cond->next = pred->next;
-    pred->next = cond;
-    
-Lexit:
     return rc;
 }
 

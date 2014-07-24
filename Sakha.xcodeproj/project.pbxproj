@@ -81,6 +81,7 @@
 		6CF34938182BD10E00887952 /* Sakha.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Sakha.1; sourceTree = "<group>"; };
 		760F202A18F55B5000AC36D2 /* dbdata.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dbdata.c; sourceTree = "<group>"; };
 		760F202C18F55B7900AC36D2 /* dbdata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dbdata.h; sourceTree = "<group>"; };
+		76BF575319507EB500C17AAA /* cursor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cursor.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,6 +210,7 @@
 				6CF34938182BD10E00887952 /* Sakha.1 */,
 				6C87361718883D7100E83C91 /* btree.h */,
 				6C36D3A91889755B004C9B87 /* btree.c */,
+				76BF575319507EB500C17AAA /* cursor.h */,
 				760F202C18F55B7900AC36D2 /* dbdata.h */,
 				760F202A18F55B5000AC36D2 /* dbdata.c */,
 				6C3A2C22182D2E340092E169 /* logger.h */,

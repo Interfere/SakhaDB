@@ -41,6 +41,13 @@
 #endif
 
 /**
+ * This is a limit restrictions for SakhaDB
+ */
+#ifndef SAKHADB_MAX_DOCUMENT_SIZE
+#   define SAKHADB_MAX_DOCUMENT_SIZE 16711680
+#endif
+
+/**
  * Database connection handle.
  *
  * Each open Sakha database is represented by a pointer to an instance of the opaque
@@ -58,9 +65,9 @@ typedef struct sakhadb sakhadb;
 typedef struct sakhadb_collection sakhadb_collection;
 
 /**
- * Statement handle
+ * Cursor handle
  */
-typedef struct sakhadb_stmt sakhadb_stmt;
+typedef struct sakhadb_cursor sakhadb_cursor;
 
 /**
  * Predicate
@@ -93,18 +100,12 @@ void sakhadb_collection_release(sakhadb_collection* coll);
 int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref doc);
 
 /**
- * List collection.
+ * Selects documents in a collection and returns a cursor to the selected documents.
  */
-int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref));
+int sakhadb_collection_find(sakhadb_collection* collection, sakhadb_cursor **pCur);
 
-int sakhadb_pred_create(int a, bson_element_ref el, sakhadb_pred** ppPred);
-void sakhadb_pred_destroy(sakhadb_pred* pred);
-
-int sakhadb_pred_add_cond(sakhadb_pred* pred, int a, bson_element_ref el);
-
-int sakhadb_prepare(const sakhadb_pred* pred, sakhadb_stmt** ppStmt);
-int sakhadb_step(sakhadb_stmt* stmt);
-int sakhadb_finalize(sakhadb_stmt* stmt);
+int sakhadb_cursor_next(sakhadb_cursor *cur);
+int sakhadb_cursor_data(sakhadb_cursor *cur, bson_document_ref* doc);
 
 /**
  * Results Codes

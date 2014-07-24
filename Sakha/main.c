@@ -26,6 +26,8 @@
 #include <bson/documentbuilder.h>
 #include <bson/oid.h>
 
+#include <sys/mman.h>
+
 #include "logger.h"
 #include "sakhadb.h"
 #include "os.h"
@@ -168,7 +170,7 @@ int test_db()
 //    cpl_region_deinit(&reg);
     
     cpl_region_t reg;
-    cpl_region_init(&reg, 64);
+    cpl_region_init(cpl_allocator_get_default(), &reg, 64);
     sakhadb_btree_dump(meta, &reg);
     
     cpl_region_append_data(&reg, "\0", 1);
@@ -242,7 +244,40 @@ int test_db2()
     
     bson_document_destroy(doc);
     
-//    sakhadb_collection_foreach(collection, test_pred);
+    sakhadb_collection_release(collection);
+    
+    sakhadb_btree_ctx_t ctx = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
+    sakhadb_btree_ctx_commit(ctx);
+    
+    rc = sakhadb_close(db);
+    if(rc != SAKHADB_OK)
+    {
+        assert(0);
+        return 1;
+    }
+    
+    return 0;
+}
+
+int test_db3()
+{
+    sakhadb* db = 0;
+    int rc = sakhadb_open("test.db", 0, &db);
+    if(rc != SAKHADB_OK)
+    {
+        assert(0);
+        return 1;
+    }
+    
+    char collname[] = "test_collection";
+    
+    sakhadb_collection* collection;
+    rc = sakhadb_collection_load(db, collname, &collection);
+    if(rc != SAKHADB_OK)
+    {
+        assert(0);
+        return 1;
+    }
     
     sakhadb_collection_release(collection);
     
@@ -263,15 +298,29 @@ int test_allocator()
 {
     cpl_allocator_ref allocator = cpl_allocator_create_dl(0x1000000);
     
-    void* ptr_a = cpl_allocator_allocate(allocator, 16);
-    void* ptr_b = cpl_allocator_allocate(allocator, 16);
-    
+    void* ptr_a = cpl_allocator_allocate(allocator, 65480);
+//    void* ptr_b = cpl_allocator_allocate(allocator, 32);
+    ptr_a = cpl_allocator_realloc(allocator, ptr_a, 65504);
+//    cpl_allocator_free(allocator, ptr_b);
     cpl_allocator_free(allocator, ptr_a);
-    cpl_allocator_free(allocator, ptr_b);
     
-    void* ptr_c = cpl_allocator_allocate(allocator, 32);
+//    void* ptr_c = cpl_allocator_allocate(allocator, 16);
+//    ptr_c = cpl_allocator_realloc(allocator, ptr_c, 32);
+//    cpl_allocator_free(allocator, ptr_c);
     
     cpl_allocator_destroy_dl(allocator);
+    return 0;
+}
+
+int test_mmap()
+{
+    void* poolBuffer = 0;
+    int i = 0;
+    int size = (SAKHADB_MAX_DOCUMENT_SIZE + 0x1000) & ~(0xFFF);
+    while (poolBuffer != MAP_FAILED) {
+        poolBuffer = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+        SLOG_INFO("buffer %d: %p", ++i, poolBuffer);
+    }
     return 0;
 }
 
