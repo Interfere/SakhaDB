@@ -279,6 +279,17 @@ int test_db3()
         return 1;
     }
     
+    bson_oid_ref oid = bson_oid_create_with_string("53e8d553f7f8d8548a000001");
+    
+    sakhadb_cursor* cur;
+    sakhadb_collection_find(collection, oid, &cur);
+    
+    bson_document_ref doc;
+    sakhadb_cursor_data(db, cur, &doc);
+    
+    sakhadb_cursor_data(db, cur, &doc);
+    
+    sakhadb_cursor_destroy(cur);
     sakhadb_collection_release(collection);
     
     sakhadb_btree_ctx_t ctx = *(sakhadb_btree_ctx_t*)((char*)db + sizeof(sakhadb_file_t) + sizeof(sakhadb_pager_t));
@@ -326,6 +337,6 @@ int test_mmap()
 
 int main(int argc, const char * argv[])
 {
-    return test_allocator();
+    return test_db3();
 }
 

@@ -102,10 +102,12 @@ int sakhadb_collection_insert(sakhadb_collection* collection, bson_document_ref 
 /**
  * Selects documents in a collection and returns a cursor to the selected documents.
  */
-int sakhadb_collection_find(sakhadb_collection* collection, sakhadb_cursor **pCur);
+int sakhadb_collection_find(sakhadb_collection* collection, bson_oid_ref oid,
+                            sakhadb_cursor **pCur);
 
 int sakhadb_cursor_next(sakhadb_cursor *cur);
-int sakhadb_cursor_data(sakhadb_cursor *cur, bson_document_ref* doc);
+int sakhadb_cursor_data(sakhadb* db, sakhadb_cursor *cur, bson_document_ref* doc);
+void sakhadb_cursor_destroy(sakhadb_cursor* cur);
 
 /**
  * Results Codes
@@ -126,7 +128,6 @@ int sakhadb_cursor_data(sakhadb_cursor *cur, bson_document_ref* doc);
 #define SAKHADB_NOTADB             10 /* File is not a valid DB */
 #define SAKHADB_NOTFOUND           11 /* Not found */
 #define SAKHADB_CANTOPEN           12 /* Unable to open the DB file */
-#define SAKHADB_REPEAT             13 /* Need to repeat operation */
 
 
 #endif // _SAKHADB_H_

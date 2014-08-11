@@ -30,8 +30,6 @@ struct BtreeCursorStack
 {
     sakhadb_btree_t         tree;
     cpl_array_t             st;         /* stack of cursors */
-    int                     dirty;
-    cpl_region_t            region;
 };
 
 int sakhadb_btree_cursor_create(sakhadb_btree_t tree, sakhadb_btree_cursor_t* cursor);
@@ -44,7 +42,7 @@ int sakhadb_btree_cursor_next(sakhadb_btree_cursor_t cursor);
 int sakhadb_btree_cursor_prev(sakhadb_btree_cursor_t cursor);
 
 Pgno sakhadb_btree_cursor_pgno(sakhadb_btree_cursor_t cursor);
-int sakhadb_cursor_find(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey);
+int sakhadb_btree_cursor_find(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey);
 int sakhadb_btree_cursor_insert(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey, Pgno no);
 
 #endif // _SAKHADB_CURSOR_H_

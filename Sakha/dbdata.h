@@ -36,4 +36,6 @@ void sakhadb_dbdata_destroy(sakhadb_dbdata_t);
 int sakhadb_dbdata_write(sakhadb_dbdata_t dbdata, const void* data, size_t ndata, Pgno* pNo);
 int sakhadb_dbdata_read(sakhadb_dbdata_t dbdata, Pgno no, cpl_region_ref reg);
 
+int sakhadb_dbdata_preload(sakhadb_dbdata_t dbdata, Pgno no, void** ppData);
+
 #endif // _SAKHADB_DBDATA_H_

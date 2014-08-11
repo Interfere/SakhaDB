@@ -343,7 +343,6 @@ static inline int btreeNext(
         }
         
         cur->index = 0;
-        stack->dirty = 1;
     }
     
 Lexit:
@@ -853,7 +852,6 @@ static inline int btreeCreateCursor(sakhadb_btree_t tree, sakhadb_btree_cursor_t
     if(rc == SAKHADB_OK)
     {
         cursor->tree = tree;
-        cursor->dirty = 0;
         *pCursor = cursor;
         return SAKHADB_OK;
     }
@@ -977,7 +975,7 @@ int sakhadb_btree_insert(sakhadb_btree_t tree, const void* key, size_t nkey, Pgn
     return btreeInsert(tree, key, nkey, no);
 }
 
-int sakhadb_cursor_find(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey)
+int sakhadb_btree_cursor_find(sakhadb_btree_cursor_t cursor, const void* key, size_t nkey)
 {
     assert(cursor->tree && key && nkey);
     SLOG_BTREE_INFO("sakhadb_btree_find: find key in tree [%d][%d]", tree->root->no, nkey);

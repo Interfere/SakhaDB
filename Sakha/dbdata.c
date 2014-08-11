@@ -141,4 +141,18 @@ int sakhadb_dbdata_read(sakhadb_dbdata_t dbdata, Pgno no, cpl_region_ref reg)
 Lexit:
     return rc;
 }
+
+int sakhadb_dbdata_preload(sakhadb_dbdata_t dbdata, Pgno no, void** ppData)
+{
+    sakhadb_page_t page;
+    int rc = sakhadb_pager_request_page(dbdata->pager, no, &page);
+    
+    if(!rc)
+    {
+        Pgno* pNo = (Pgno*)page->data;
+        *ppData = pNo + 1;
+    }
+    
+    return rc;
+}
 /******************************************************************************/

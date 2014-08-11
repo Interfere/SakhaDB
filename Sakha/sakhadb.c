@@ -44,6 +44,12 @@ struct sakhadb_collection
     sakhadb*            db;
 };
 
+struct sakhadb_cursor
+{
+    struct BtreeCursorStack*    cur;
+    cpl_region_ref              reg;
+};
+
 static int collectionCreate(sakhadb* db, const char* name, size_t length, struct sakhadb_collection** ppColl)
 {
     int rc = SAKHADB_OK;
@@ -71,7 +77,7 @@ static int collectionCreate(sakhadb* db, const char* name, size_t length, struct
         goto Lfail;
     }
     
-    int cmp = sakhadb_cursor_find(cursor, name, length);
+    int cmp = sakhadb_btree_cursor_find(cursor, name, length);
     Pgno no;
     if(cmp != 0) // Add new collection to Database
     {
@@ -239,7 +245,8 @@ Lexit:
     return rc;
 }
 
-int sakhadb_collection_find(sakhadb_collection* collection, sakhadb_cursor **pCur)
+int sakhadb_collection_find(sakhadb_collection* collection, bson_oid_ref oid,
+                            sakhadb_cursor **pCur)
 {
     int rc = SAKHADB_OK;
 
@@ -250,77 +257,96 @@ int sakhadb_collection_find(sakhadb_collection* collection, sakhadb_cursor **pCu
         goto Lexit;
     }
     
-    rc = sakhadb_btree_cursor_first(cursor);
-    if(rc)
+    if(oid)
     {
-        sakhadb_btree_cursor_destroy(cursor);
+        rc = sakhadb_btree_cursor_find(cursor, oid->data, sizeof(oid->data));
+    }
+    else
+    {
+        rc = sakhadb_btree_cursor_first(cursor);
     }
     
-    *pCur = (sakhadb_cursor *)cursor;
+    if(rc)
+    {
+        goto Lfail;
+    }
+    
+    sakhadb_cursor* pCursor = cpl_allocator_allocate(cpl_allocator_get_default(), sizeof(sakhadb_cursor));
+    if(!pCursor)
+    {
+        goto Lfail;
+    }
+    
+    pCursor->cur = cursor;
+    pCursor->reg = 0;
+    
+    *pCur = pCursor;
     
 Lexit:
     return rc;
+    
+Lfail:
+    sakhadb_btree_cursor_destroy(cursor);
+    goto Lexit;
+}
+
+void sakhadb_cursor_destroy(sakhadb_cursor* cur)
+{
+    sakhadb_btree_cursor_destroy(cur->cur);
+    if(cur->reg)
+    {
+        cpl_allocator_destroy_dl(cur->reg->allocator);
+    }
+    // TODO: add cache list for cursors
+    cpl_allocator_free(cpl_allocator_get_default(), cur);
 }
 
 int sakhadb_cursor_next(sakhadb_cursor *cur)
 {
-    return sakhadb_btree_cursor_next((sakhadb_btree_cursor_t)cur);
+    return sakhadb_btree_cursor_next(cur->cur);
 }
 
-int sakhadb_cursor_data(sakhadb_cursor *cur, bson_document_ref* doc)
+int sakhadb_cursor_data(sakhadb* db, sakhadb_cursor *cur, bson_document_ref* doc)
 {
     int rc = SAKHADB_OK;
+    cpl_allocator_ref allocator = 0;
     
-    return rc;
-}
-
-int sakhadb_collection_foreach(const sakhadb_collection* collection, int(*pred)(bson_document_ref))
-{
-    int rc = SAKHADB_OK;
-    sakhadb_btree_cursor_t cursor = 0;
-    cpl_region_t region = {0, 0, 0};
-    
-    rc = sakhadb_btree_cursor_create(collection->tree, &cursor);
-    if(rc)
+    if(!cur->reg)
     {
-        goto Lexit;
-    }
-    
-    rc = sakhadb_btree_cursor_first(cursor);
-    if(rc)
-    {
-        goto Lexit;
-    }
-    
-    rc = cpl_region_init(cpl_allocator_get_default(), &region, 64);
-    if(rc)
-    {
-        goto Lexit;
-    }
-    
-    do
-    {
-        // print info
-        rc = sakhadb_dbdata_read(collection->db->dbdata, sakhadb_btree_cursor_pgno(cursor), &region);
+        bson_document_ref d;
+        rc = sakhadb_dbdata_preload(db->dbdata, sakhadb_btree_cursor_pgno(cur->cur), (void**)&d);
         if(rc)
         {
             goto Lexit;
         }
         
-        pred(bson_document_create_with_data(region.data));
+        size_t sz = bson_document_size(d);
         
-        rc = sakhadb_btree_cursor_next(cursor);
-        region.offset = 0;
-    } while(rc == SAKHADB_OK);
-    
-Lexit:
-    if(rc == SAKHADB_NOTFOUND)
-    {
-        rc = SAKHADB_OK;
+        allocator = cpl_allocator_create_dl(sz + sizeof(cpl_region_t));
+        if(!allocator)
+        {
+            goto Lexit;
+        }
+        
+        cpl_region_ref reg = cpl_region_create(allocator, sz);
+        
+        // print info
+        rc = sakhadb_dbdata_read(db->dbdata, sakhadb_btree_cursor_pgno(cur->cur), reg);
+        if(rc)
+        {
+            goto Lfail;
+        }
+        
+        cur->reg = reg;
     }
     
-    cpl_region_deinit(&region);
-    sakhadb_btree_cursor_destroy(cursor);
+    *doc = bson_document_create_with_data(cur->reg->data);
+    goto Lexit;
+    
+Lfail:
+    cpl_allocator_destroy_dl(allocator);
+    
+Lexit:
     return rc;
 }
 
