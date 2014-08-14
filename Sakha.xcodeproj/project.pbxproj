@@ -26,6 +26,8 @@
 		6CF34937182BD10E00887952 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CF34936182BD10E00887952 /* main.c */; };
 		6CF34939182BD10E00887952 /* Sakha.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6CF34938182BD10E00887952 /* Sakha.1 */; };
 		760F202B18F55B5000AC36D2 /* dbdata.c in Sources */ = {isa = PBXBuildFile; fileRef = 760F202A18F55B5000AC36D2 /* dbdata.c */; };
+		767C310F199CD0A300EBC481 /* cpl_allocator_pool.c in Sources */ = {isa = PBXBuildFile; fileRef = 767C310E199CD0A300EBC481 /* cpl_allocator_pool.c */; };
+		767C3111199CD25700EBC481 /* cpl_allocator_dl.c in Sources */ = {isa = PBXBuildFile; fileRef = 767C3110199CD25700EBC481 /* cpl_allocator_dl.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -81,6 +83,8 @@
 		6CF34938182BD10E00887952 /* Sakha.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Sakha.1; sourceTree = "<group>"; };
 		760F202A18F55B5000AC36D2 /* dbdata.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dbdata.c; sourceTree = "<group>"; };
 		760F202C18F55B7900AC36D2 /* dbdata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dbdata.h; sourceTree = "<group>"; };
+		767C310E199CD0A300EBC481 /* cpl_allocator_pool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_allocator_pool.c; sourceTree = "<group>"; };
+		767C3110199CD25700EBC481 /* cpl_allocator_dl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_allocator_dl.c; sourceTree = "<group>"; };
 		76BF575319507EB500C17AAA /* cursor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cursor.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -144,6 +148,8 @@
 			isa = PBXGroup;
 			children = (
 				6C39758F188D3B0A00B20127 /* cpl_allocator.c */,
+				767C310E199CD0A300EBC481 /* cpl_allocator_pool.c */,
+				767C3110199CD25700EBC481 /* cpl_allocator_dl.c */,
 				6C8736021888350000E83C91 /* cpl_array.c */,
 				6C8736031888350000E83C91 /* cpl_atomic_osx.c */,
 				6C39758C188D2F6D00B20127 /* cpl_list.c */,
@@ -285,9 +291,11 @@
 				6C3A2C25182D35E70092E169 /* os_posix.c in Sources */,
 				6C8736081888350000E83C91 /* cpl_random_osx.c in Sources */,
 				6C8735FD188834F100E83C91 /* element.c in Sources */,
+				767C3111199CD25700EBC481 /* cpl_allocator_dl.c in Sources */,
 				6C873600188834F100E83C91 /* oid.c in Sources */,
 				760F202B18F55B5000AC36D2 /* dbdata.c in Sources */,
 				6C36D3AA1889755B004C9B87 /* btree.c in Sources */,
+				767C310F199CD0A300EBC481 /* cpl_allocator_pool.c in Sources */,
 				6C39758D188D2F6D00B20127 /* cpl_list.c in Sources */,
 				6C3A2C21182D2E280092E169 /* logger.c in Sources */,
 				6C8735FE188834F100E83C91 /* iterator.c in Sources */,
