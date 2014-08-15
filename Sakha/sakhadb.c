@@ -340,7 +340,7 @@ int sakhadb_cursor_data(sakhadb* db, sakhadb_cursor *cur, bson_document_ref* doc
         cur->reg = reg;
     }
     
-    *doc = bson_document_create_with_data(cur->reg->data);
+    *doc = (bson_document_ref)cur->reg->data;
     goto Lexit;
     
 Lfail:
