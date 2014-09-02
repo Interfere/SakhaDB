@@ -25,6 +25,7 @@
 #include <cpl/cpl_allocator.h>
 #include <bson/documentbuilder.h>
 #include <bson/oid.h>
+#include <bson/iterator.h>
 
 #include <sys/mman.h>
 
@@ -33,6 +34,7 @@
 #include "os.h"
 #include "btree.h"
 #include "dbdata.h"
+#include <bson/jsonparser.h>
 
 int test_db()
 {
@@ -337,6 +339,27 @@ int test_mmap()
 
 int main(int argc, const char * argv[])
 {
-    return test_db3();
+    const char* tst = "  {"
+    "\"result\": {"
+        "\"entries\": [{"
+                    "\"type\": \"track\","
+                    "\"_id\": \"016000275263\","
+                    "\"image number\": 123456789"
+                    "}]"
+    "},"
+    "\"status\": {"
+        "\"error\": \"ok\","
+        "\"errorMessage\": \"\""
+    "}"
+    "}";
+    bson_document_ref d = json2bson(tst, strlen(tst));
+    bson_iterator_t i;
+    bson_element_ref e;
+    for(e = bson_iterator_init(&i, d); !bson_iterator_end(&i); e = bson_iterator_next(&i))
+    {
+        SLOG_INFO("el: %d\n", (int)bson_element_type(e));
+    }
+    
+    return 0;
 }
 

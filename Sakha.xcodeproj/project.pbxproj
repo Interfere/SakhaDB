@@ -25,6 +25,7 @@
 		6CA099141834C0FF00A42DE9 /* paging.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CA099131834C0FF00A42DE9 /* paging.c */; };
 		6CF34937182BD10E00887952 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 6CF34936182BD10E00887952 /* main.c */; };
 		6CF34939182BD10E00887952 /* Sakha.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6CF34938182BD10E00887952 /* Sakha.1 */; };
+		760E8A9219A2413800270220 /* jsonparser.c in Sources */ = {isa = PBXBuildFile; fileRef = 760E8A9119A2413800270220 /* jsonparser.c */; };
 		760F202B18F55B5000AC36D2 /* dbdata.c in Sources */ = {isa = PBXBuildFile; fileRef = 760F202A18F55B5000AC36D2 /* dbdata.c */; };
 		767C310F199CD0A300EBC481 /* cpl_allocator_pool.c in Sources */ = {isa = PBXBuildFile; fileRef = 767C310E199CD0A300EBC481 /* cpl_allocator_pool.c */; };
 		767C3111199CD25700EBC481 /* cpl_allocator_dl.c in Sources */ = {isa = PBXBuildFile; fileRef = 767C3110199CD25700EBC481 /* cpl_allocator_dl.c */; };
@@ -81,6 +82,8 @@
 		6CF34933182BD10E00887952 /* Sakha */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Sakha; sourceTree = BUILT_PRODUCTS_DIR; };
 		6CF34936182BD10E00887952 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		6CF34938182BD10E00887952 /* Sakha.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Sakha.1; sourceTree = "<group>"; };
+		760E8A9019A2408B00270220 /* jsonparser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = jsonparser.h; sourceTree = "<group>"; };
+		760E8A9119A2413800270220 /* jsonparser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = jsonparser.c; sourceTree = "<group>"; };
 		760F202A18F55B5000AC36D2 /* dbdata.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dbdata.c; sourceTree = "<group>"; };
 		760F202C18F55B7900AC36D2 /* dbdata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dbdata.h; sourceTree = "<group>"; };
 		767C310E199CD0A300EBC481 /* cpl_allocator_pool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cpl_allocator_pool.c; sourceTree = "<group>"; };
@@ -166,6 +169,7 @@
 				6C8735F1188834F100E83C91 /* document.h */,
 				6C8735F3188834F100E83C91 /* documentbuilder.h */,
 				6C8735F5188834F100E83C91 /* element.h */,
+				760E8A9019A2408B00270220 /* jsonparser.h */,
 				6C8735F7188834F100E83C91 /* iterator.h */,
 				6C8735FA188834F100E83C91 /* oid.h */,
 			);
@@ -178,6 +182,7 @@
 			children = (
 				6C8735F2188834F100E83C91 /* documentbuilder.c */,
 				6C8735F4188834F100E83C91 /* element.c */,
+				760E8A9119A2413800270220 /* jsonparser.c */,
 				6C8735F6188834F100E83C91 /* iterator.c */,
 				6C8735F9188834F100E83C91 /* oid.c */,
 			);
@@ -287,6 +292,7 @@
 				6C8736071888350000E83C91 /* cpl_atomic_osx.c in Sources */,
 				6C2CACA818338E6F007ACC65 /* sakhadb.c in Sources */,
 				6CF34937182BD10E00887952 /* main.c in Sources */,
+				760E8A9219A2413800270220 /* jsonparser.c in Sources */,
 				6C8736061888350000E83C91 /* cpl_array.c in Sources */,
 				6C3A2C25182D35E70092E169 /* os_posix.c in Sources */,
 				6C8736081888350000E83C91 /* cpl_random_osx.c in Sources */,
