@@ -337,29 +337,89 @@ int test_mmap()
     return 0;
 }
 
-int main(int argc, const char * argv[])
+bson_document_ref create_test_doc()
+{
+    bson_document_builder_ref root = bson_document_builder_create();
+    
+    {
+        bson_document_builder_ref b1 = bson_document_builder_create();
+        
+        {
+            bson_array_builder_ref b2 = bson_array_builder_create();
+            
+            {
+                bson_document_builder_ref b3 = bson_document_builder_create();
+                
+                bson_document_builder_append_str(b3, "type", "track");
+                
+                bson_oid_ref oid = bson_oid_create_with_string("53e8d553f7f8d8548a000001");
+                bson_document_builder_append_oid(b3, "_id", oid);
+                bson_oid_destroy(oid);
+                
+                bson_document_builder_append_i(b3, "image number", 123456789);
+
+                bson_document_ref d3 = bson_document_builder_finalize(b3);
+                bson_array_builder_append_doc(b2, d3);
+                bson_document_destroy(d3);
+            }
+            
+            bson_array_ref d2 = bson_array_builder_finalize(b2);
+            bson_document_builder_append_arr(b1, "entries", d2);
+            bson_array_destroy(d2);
+        }
+        
+        bson_document_ref d = bson_document_builder_finalize(b1);
+        bson_document_builder_append_doc(root, "result", d);
+        bson_document_destroy(d);
+    }
+    
+    {
+        bson_document_builder_ref b1 = bson_document_builder_create();
+        
+        bson_document_builder_append_str(b1, "error", "ok");
+        bson_document_builder_append_str(b1, "errorMessage", "");
+        
+        bson_document_ref d = bson_document_builder_finalize(b1);
+        bson_document_builder_append_doc(root, "status", d);
+        bson_document_destroy(d);
+    }
+    
+    return bson_document_builder_finalize(root);
+}
+
+int test_json2bson()
 {
     const char* tst = "  {"
     "\"result\": {"
-        "\"entries\": [{"
-                    "\"type\": \"track\","
-                    "\"_id\": \"016000275263\","
-                    "\"image number\": 123456789"
-                    "}]"
+    "\"entries\": [{"
+    "\"type\": \"track\","
+    "\"_id\": ObjectId(\"53e8d553f7f8d8548a000001\"),"
+    "\"image number\": 123456789"
+    "}]"
     "},"
     "\"status\": {"
-        "\"error\": \"ok\","
-        "\"errorMessage\": \"\""
+    "\"error\": \"ok\","
+    "\"errorMessage\": \"\""
     "}"
     "}";
     bson_document_ref d = json2bson(tst, strlen(tst));
-    bson_iterator_t i;
-    bson_element_ref e;
-    for(e = bson_iterator_init(&i, d); !bson_iterator_end(&i); e = bson_iterator_next(&i))
+    bson_document_ref d2 = create_test_doc();
+    
+    if(bson_document_size(d) != bson_document_size(d2))
     {
-        SLOG_INFO("el: %d\n", (int)bson_element_type(e));
+        return 1;
+    }
+    
+    if(memcmp(d->data, d2->data, bson_document_size(d)))
+    {
+        return 1;
     }
     
     return 0;
+}
+
+int main(int argc, const char * argv[])
+{
+    return test_json2bson();
 }
 
